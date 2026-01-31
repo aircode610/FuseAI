@@ -20,7 +20,7 @@ export function AgentAPI({ agent }) {
   const [response, setResponse] = useState(null);
   const [loading, setLoading] = useState(false);
   const apiKey = import.meta.env.VITE_STRIPE_KEY;
-  const baseUrl = agent?.apiUrl || 'https://forge.app/api/agent/abc123';
+  const baseUrl = agent?.apiUrl || 'https://fuseai.app/api/agent/abc123';
 
   const copyToClipboard = (text) => {
     navigator.clipboard.writeText(text);

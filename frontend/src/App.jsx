@@ -1,12 +1,12 @@
 /**
- * Forge - AI Agent Generator
+ * FuseAI - AI Agent Generator
  * Main Application Component
  */
 
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { AgentProvider } from './context/AgentContext';
 import { Layout } from './components/layout';
-import { Dashboard, AgentDetail, Templates } from './pages';
+import { Dashboard, AgentDetail, Settings, Documentation } from './pages';
 
 function App() {
   return (
@@ -16,7 +16,8 @@ function App() {
           <Route path="/" element={<Layout />}>
             <Route index element={<Dashboard />} />
             <Route path="agents/:id" element={<AgentDetail />} />
-            <Route path="templates" element={<Templates />} />
+            <Route path="settings" element={<Settings />} />
+            <Route path="docs" element={<Documentation />} />
           </Route>
         </Routes>
       </BrowserRouter>

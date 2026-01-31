@@ -1,4 +1,4 @@
-# Forge - AI Agent Generator
+# FuseAI - AI Agent Generator
 
 A modern React frontend for building, deploying, and monitoring AI agents that connect your favorite services.
 
@@ -9,7 +9,6 @@ A modern React frontend for building, deploying, and monitoring AI agents that c
 - **Agent Monitoring** - View logs, metrics, and performance data
 - **API Testing Playground** - Test your agent's API endpoints directly in the browser
 - **Code Viewer** - View and download generated agent code
-- **Templates** - Start from pre-built templates for common integrations
 
 ## Tech Stack
 
@@ -21,10 +20,10 @@ A modern React frontend for building, deploying, and monitoring AI agents that c
 ## Color Palette
 
 ```css
---color-primary: rgb(48, 54, 79);     /* Dark blue/purple */
---color-secondary: rgb(172, 186, 196); /* Light gray/blue */
---color-accent: rgb(225, 217, 188);    /* Warm beige */
---color-background: rgb(240, 240, 219); /* Light cream */
+--color-primary: #BE5985;    /* Darkest pink/magenta */
+--color-secondary: #EC7FA9;  /* Medium pink */
+--color-accent: #FFB8E0;     /* Light pink */
+--color-background: #FFEDFA; /* Lightest pink */
 ```
 
 ## Project Structure
@@ -57,8 +56,7 @@ src/
 │   └── useAgentData.js
 ├── pages/              # Page components
 │   ├── Dashboard.jsx
-│   ├── AgentDetail.jsx
-│   └── Templates.jsx
+│   └── AgentDetail.jsx
 ├── services/           # API service layer
 │   ├── api.js          # Base API client
 │   └── agentService.js # Agent-specific API calls

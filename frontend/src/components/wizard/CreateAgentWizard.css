@@ -14,7 +14,7 @@
   justify-content: center;
   padding: var(--spacing-xl) var(--spacing-lg);
   border-bottom: 1px solid var(--color-border-light);
-  background-color: rgba(48, 54, 79, 0.02);
+  background-color: rgba(190, 89, 133, 0.02);
 }
 
 .wizard__step {
@@ -31,7 +31,7 @@
   width: 36px;
   height: 36px;
   border-radius: var(--radius-full);
-  background-color: rgba(48, 54, 79, 0.1);
+  background-color: rgba(190, 89, 133, 0.1);
   color: var(--color-text-muted);
   transition: all var(--transition-normal);
 }
@@ -111,7 +111,7 @@
 .wizard__examples {
   margin-top: var(--spacing-lg);
   padding: var(--spacing-md);
-  background-color: rgba(48, 54, 79, 0.03);
+  background-color: rgba(190, 89, 133, 0.03);
   border-radius: var(--radius-md);
 }
 
@@ -136,7 +136,7 @@
 }
 
 .wizard__examples li:hover {
-  background-color: rgba(48, 54, 79, 0.05);
+  background-color: rgba(190, 89, 133, 0.05);
   color: var(--color-primary);
 }
 
@@ -148,7 +148,7 @@
 }
 
 .wizard__plan-card {
-  background-color: white;
+  background-color: var(--color-surface);
 }
 
 .plan-section {
@@ -179,7 +179,7 @@
   align-items: center;
   gap: var(--spacing-xs);
   padding: var(--spacing-xs) var(--spacing-sm);
-  background-color: rgba(48, 54, 79, 0.1);
+  background-color: rgba(190, 89, 133, 0.1);
   border-radius: var(--radius-sm);
   font-size: 0.75rem;
   font-weight: 500;
@@ -192,7 +192,7 @@
   align-items: center;
   gap: var(--spacing-sm);
   padding: var(--spacing-sm);
-  background-color: rgba(48, 54, 79, 0.03);
+  background-color: rgba(190, 89, 133, 0.03);
   border-radius: var(--radius-sm);
   margin-top: var(--spacing-sm);
 }
@@ -291,7 +291,7 @@
   justify-content: space-between;
   padding: var(--spacing-md) var(--spacing-lg);
   border-top: 1px solid var(--color-border-light);
-  background-color: rgba(48, 54, 79, 0.02);
+  background-color: rgba(190, 89, 133, 0.02);
 }
 
 .wizard__footer-actions {

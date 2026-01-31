@@ -44,7 +44,7 @@
 }
 
 .stat-card__icon--primary {
-  background-color: rgba(48, 54, 79, 0.1);
+  background-color: rgba(190, 89, 133, 0.1);
   color: var(--color-primary);
 }
 
@@ -180,7 +180,7 @@
 .config-list__code {
   font-family: var(--font-mono);
   font-size: 0.8125rem;
-  background-color: rgba(48, 54, 79, 0.05);
+  background-color: rgba(190, 89, 133, 0.05);
   padding: var(--spacing-xs) var(--spacing-sm);
   border-radius: var(--radius-sm);
   color: var(--color-text-primary);
@@ -202,6 +202,6 @@
 }
 
 .config-list__copy:hover {
-  background-color: rgba(48, 54, 79, 0.05);
+  background-color: rgba(190, 89, 133, 0.05);
   color: var(--color-text-primary);
 }

@@ -120,7 +120,7 @@ export function Dashboard() {
   };
 
   return (
-    <div className="page dashboard">
+    <div className="page dashboard fade-in">
       <div className="page__header">
         <div className="page__header-content">
           <h1 className="page__title">My Agents</h1>
@@ -153,7 +153,12 @@ export function Dashboard() {
 
       {filteredAgents.length > 0 ? (
         <div className="dashboard__grid">
-          {filteredAgents.map(agent => (
+          {filteredAgents.map((agent, index) => (
+            <div 
+              key={agent.id}
+              className="fade-in-scale"
+              style={{ animationDelay: `${index * 0.1}s` }}
+            >
             <AgentCard
               key={agent.id}
               agent={agent}
@@ -163,6 +168,7 @@ export function Dashboard() {
               onDelete={handleDelete}
               onSettings={handleSettings}
             />
+            </div>
           ))}
         </div>
       ) : (

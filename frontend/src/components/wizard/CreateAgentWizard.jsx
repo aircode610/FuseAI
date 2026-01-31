@@ -98,7 +98,7 @@ export function CreateAgentWizard({ onComplete, onCancel }) {
       ...plan,
       id: `agent_${Date.now()}`,
       status: 'running',
-      apiUrl: 'https://forge.app/api/agent/abc123',
+      apiUrl: 'https://fuseai.app/api/agent/abc123',
       apiKey: 'sk_live_xxxxxxxxxxxxxxxxxxxxx',
     });
   };

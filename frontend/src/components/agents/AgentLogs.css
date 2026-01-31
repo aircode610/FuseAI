@@ -34,7 +34,7 @@
 .agent-logs__list {
   display: flex;
   flex-direction: column;
-  background-color: white;
+  background-color: var(--color-surface);
   border-radius: var(--radius-lg);
   border: 1px solid var(--color-border-light);
   overflow: hidden;
@@ -65,7 +65,7 @@
 }
 
 .log-entry__main:hover {
-  background-color: rgba(48, 54, 79, 0.02);
+  background-color: rgba(190, 89, 133, 0.02);
 }
 
 .log-entry__icon {

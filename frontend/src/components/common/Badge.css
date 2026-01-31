@@ -27,7 +27,7 @@
 
 /* Variants */
 .badge--default {
-  background-color: rgba(48, 54, 79, 0.1);
+  background-color: rgba(190, 89, 133, 0.1);
   color: var(--color-text-secondary);
 }
 
@@ -38,7 +38,7 @@
 
 .badge--secondary {
   background-color: var(--color-secondary);
-  color: var(--color-text-primary);
+  color: var(--color-text-inverse);
 }
 
 .badge--accent {

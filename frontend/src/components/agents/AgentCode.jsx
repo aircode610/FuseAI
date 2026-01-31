@@ -19,7 +19,7 @@ export function AgentCode({ agent }) {
 from typing import Optional
 import os
 
-app = FastAPI(title="${agent?.name || 'Forge Agent'}")
+app = FastAPI(title="${agent?.name || 'FuseAI Agent'}")
 
 # Configuration
 API_KEY = os.getenv("API_KEY")
@@ -83,7 +83,7 @@ async def process_zapier_action(data: dict) -> dict:
       icon: FileJson,
       content: JSON.stringify({
         agent_id: agent?.id || 'agent_001',
-        name: agent?.name || 'Forge Agent',
+        name: agent?.name || 'FuseAI Agent',
         trigger_type: agent?.triggerType || 'webhook',
         zapier: {
           api_key: '${ZAPIER_API_KEY}',
@@ -110,9 +110,9 @@ pydantic==2.5.3
     },
     'README.md': {
       icon: FileText,
-      content: `# ${agent?.name || 'Forge Agent'}
+      content: `# ${agent?.name || 'FuseAI Agent'}
 
-${agent?.description || 'Auto-generated agent by Forge'}
+${agent?.description || 'Auto-generated agent by FuseAI'}
 
 ## Setup
 

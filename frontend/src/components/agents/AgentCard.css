@@ -53,7 +53,7 @@
 
 .agent-card__progress-bar {
   height: 4px;
-  background-color: rgba(48, 54, 79, 0.1);
+  background-color: rgba(190, 89, 133, 0.1);
   border-radius: var(--radius-full);
   overflow: hidden;
 }
@@ -108,7 +108,7 @@
 }
 
 .agent-card__action-btn:hover {
-  background-color: rgba(48, 54, 79, 0.05);
+  background-color: rgba(190, 89, 133, 0.05);
   color: var(--color-text-primary);
 }
 

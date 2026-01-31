@@ -5,12 +5,36 @@
   align-items: center;
   justify-content: center;
   gap: var(--spacing-sm);
-  font-weight: 500;
+  font-weight: 600;
   border-radius: var(--radius-md);
   transition: all var(--transition-fast);
   cursor: pointer;
   border: none;
   outline: none;
+  position: relative;
+  overflow: hidden;
+}
+
+.btn::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.3);
+  transform: translate(-50%, -50%);
+  transition: width 0.6s, height 0.6s;
+}
+
+.btn:hover::before {
+  width: 300px;
+  height: 300px;
+}
+
+.btn:active {
+  transform: scale(0.98);
 }
 
 .btn:disabled {
@@ -41,16 +65,18 @@
 }
 
 .btn--primary:hover:not(:disabled) {
-  background-color: rgb(38, 44, 69);
+  filter: brightness(1.15);
+  box-shadow: 0 4px 12px var(--shadow-glow);
+  transform: translateY(-2px);
 }
 
 .btn--secondary {
   background-color: var(--color-secondary);
-  color: var(--color-text-primary);
+  color: var(--color-text-inverse);
 }
 
 .btn--secondary:hover:not(:disabled) {
-  background-color: rgb(152, 166, 176);
+  filter: brightness(1.1);
 }
 
 .btn--accent {
@@ -59,7 +85,7 @@
 }
 
 .btn--accent:hover:not(:disabled) {
-  background-color: rgb(205, 197, 168);
+  filter: brightness(1.1);
 }
 
 .btn--outline {
@@ -69,7 +95,7 @@
 }
 
 .btn--outline:hover:not(:disabled) {
-  background-color: rgba(48, 54, 79, 0.05);
+  background-color: var(--color-surface-hover);
   border-color: var(--color-primary);
 }
 
@@ -79,7 +105,7 @@
 }
 
 .btn--ghost:hover:not(:disabled) {
-  background-color: rgba(48, 54, 79, 0.05);
+  background-color: var(--color-surface-hover);
   color: var(--color-text-primary);
 }
 

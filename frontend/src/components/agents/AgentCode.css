@@ -16,7 +16,7 @@
 .agent-code__sidebar {
   width: 220px;
   border-right: 1px solid var(--color-border-light);
-  background-color: rgba(48, 54, 79, 0.02);
+  background-color: rgba(190, 89, 133, 0.02);
   padding: var(--spacing-md);
   flex-shrink: 0;
 }
@@ -37,7 +37,7 @@
 }
 
 .file-tree__folder:hover {
-  background-color: rgba(48, 54, 79, 0.05);
+  background-color: rgba(190, 89, 133, 0.05);
 }
 
 .file-tree__files {
@@ -57,12 +57,12 @@
 }
 
 .file-tree__file:hover {
-  background-color: rgba(48, 54, 79, 0.05);
+  background-color: rgba(190, 89, 133, 0.05);
   color: var(--color-text-primary);
 }
 
 .file-tree__file--active {
-  background-color: rgba(48, 54, 79, 0.1);
+  background-color: rgba(190, 89, 133, 0.1);
   color: var(--color-primary);
 }
 
@@ -80,7 +80,7 @@
   justify-content: space-between;
   padding: var(--spacing-sm) var(--spacing-md);
   border-bottom: 1px solid var(--color-border-light);
-  background-color: rgba(48, 54, 79, 0.02);
+  background-color: rgba(190, 89, 133, 0.02);
 }
 
 .agent-code__filename {

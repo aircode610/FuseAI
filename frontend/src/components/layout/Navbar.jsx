@@ -4,7 +4,7 @@
  */
 
 import { Link, useLocation } from 'react-router-dom';
-import { Hammer, LayoutDashboard, FileCode2, User, ChevronDown } from 'lucide-react';
+import { Sparkles, LayoutDashboard, BookOpen, User, ChevronDown } from 'lucide-react';
 import { useState } from 'react';
 import './Navbar.css';
 
@@ -14,15 +14,15 @@ export function Navbar() {
 
   const navItems = [
     { path: '/', label: 'Dashboard', icon: LayoutDashboard },
-    { path: '/templates', label: 'Templates', icon: FileCode2 },
+    { path: '/docs', label: 'Docs', icon: BookOpen },
   ];
 
   return (
     <header className="navbar">
       <div className="navbar__container">
         <Link to="/" className="navbar__brand">
-          <Hammer className="navbar__logo" size={24} />
-          <span className="navbar__brand-text">Forge</span>
+          <Sparkles className="navbar__logo" size={24} />
+          <span className="navbar__brand-text">FuseAI</span>
         </Link>
 
         <nav className="navbar__nav">
