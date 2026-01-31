@@ -1,0 +1,118 @@
+/* AgentCard Component Styles */
+
+.agent-card-link {
+  display: block;
+  text-decoration: none;
+}
+
+.agent-card {
+  height: 100%;
+}
+
+.agent-card__content {
+  padding: var(--spacing-lg);
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+/* Header */
+.agent-card__header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+}
+
+.agent-card__title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-sm);
+}
+
+.agent-card__name {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.agent-card__description {
+  font-size: 0.8125rem;
+  color: var(--color-text-muted);
+}
+
+/* Metrics */
+.agent-card__metrics {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+.agent-card__progress-bar {
+  height: 4px;
+  background-color: rgba(48, 54, 79, 0.1);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+}
+
+.agent-card__progress-fill {
+  height: 100%;
+  background-color: var(--color-success);
+  border-radius: var(--radius-full);
+  transition: width var(--transition-normal);
+}
+
+.agent-card__stats {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  flex-wrap: wrap;
+}
+
+.agent-card__stat--success {
+  color: var(--color-success);
+}
+
+.agent-card__stat--error {
+  color: var(--color-error);
+}
+
+.agent-card__stat-divider {
+  color: var(--color-border);
+}
+
+/* Actions */
+.agent-card__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  margin-top: auto;
+  padding-top: var(--spacing-md);
+  border-top: 1px solid var(--color-border-light);
+}
+
+.agent-card__action-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-md);
+  color: var(--color-text-muted);
+  transition: all var(--transition-fast);
+}
+
+.agent-card__action-btn:hover {
+  background-color: rgba(48, 54, 79, 0.05);
+  color: var(--color-text-primary);
+}
+
+.agent-card__action-btn:last-child:hover {
+  background-color: rgba(239, 68, 68, 0.05);
+  color: var(--color-error);
+}

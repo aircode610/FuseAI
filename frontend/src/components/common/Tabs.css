@@ -1,0 +1,63 @@
+/* Tabs Component Styles */
+
+.tabs {
+  width: 100%;
+}
+
+.tabs__list {
+  display: flex;
+  gap: var(--spacing-xs);
+  border-bottom: 1px solid var(--color-border-light);
+  padding: 0 var(--spacing-md);
+  overflow-x: auto;
+}
+
+.tabs__tab {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-md) var(--spacing-md);
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--color-text-muted);
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  transition: all var(--transition-fast);
+  white-space: nowrap;
+}
+
+.tabs__tab:hover {
+  color: var(--color-text-primary);
+}
+
+.tabs__tab--active {
+  color: var(--color-primary);
+  border-bottom-color: var(--color-primary);
+}
+
+.tabs__tab-icon {
+  flex-shrink: 0;
+}
+
+.tabs__tab-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  background-color: rgba(48, 54, 79, 0.1);
+  color: var(--color-text-secondary);
+  border-radius: var(--radius-full);
+}
+
+.tabs__tab--active .tabs__tab-badge {
+  background-color: rgba(48, 54, 79, 0.15);
+  color: var(--color-primary);
+}
+
+.tabs__panel {
+  padding: var(--spacing-lg);
+}
