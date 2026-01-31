@@ -11,6 +11,7 @@ FuseAI analyzes natural language requests, designs REST APIs, selects Zapier int
 ```
 FuseAI/
 ├── core/               # Core agent generation logic
+├── frontend/           # Frontend of the application
 ├── templates/          # Code templates
 ├── monitoring/         # Logging and metrics
 ├── runtime/            # Deployed agent instances
