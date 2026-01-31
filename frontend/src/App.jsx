@@ -1,8 +1,3 @@
-/**
- * FuseAI - AI Agent Generator
- * Main Application Component
- */
-
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { AgentProvider } from './context/AgentContext';
 import { Layout } from './components/layout';

@@ -1,8 +1,3 @@
-/**
- * Navbar Component
- * Main navigation header
- */
-
 import { Link, useLocation } from 'react-router-dom';
 import { Sparkles, LayoutDashboard, BookOpen, User, ChevronDown } from 'lucide-react';
 import { useState } from 'react';
@@ -55,12 +50,6 @@ export function Navbar() {
               <div className="navbar__dropdown">
                 <Link to="/settings" className="navbar__dropdown-item">
                   Account Settings
-                </Link>
-                <Link to="/api-keys" className="navbar__dropdown-item">
-                  API Keys
-                </Link>
-                <Link to="/docs" className="navbar__dropdown-item">
-                  Documentation
                 </Link>
                 <hr className="navbar__dropdown-divider" />
                 <button className="navbar__dropdown-item navbar__dropdown-item--danger">

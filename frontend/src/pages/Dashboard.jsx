@@ -1,65 +1,13 @@
-/**
- * Dashboard Page
- * Main page showing all agents
- */
-
 import { useState, useEffect } from 'react';
-import { Plus, Search, Filter, Bot } from 'lucide-react';
+import { Plus, Search, Bot } from 'lucide-react';
 import { Button, Input, Select, Modal } from '../components/common';
 import { AgentCard } from '../components/agents';
 import { CreateAgentWizard } from '../components/wizard';
 import { useAgents } from '../context/AgentContext';
+import { mockAgents } from '../mocks/agents';
+import { STATUS_OPTIONS } from '../constants';
+import { filterBySearchQuery, pluralize } from '../utils';
 import './Dashboard.css';
-
-// Mock data for demonstration
-const mockAgents = [
-  {
-    id: 'agent_001',
-    name: 'Trello Done Notifier',
-    description: 'Notifies Slack when Trello cards move to Done',
-    status: 'running',
-    triggerType: 'webhook',
-    services: ['Trello', 'Slack'],
-    metrics: {
-      totalRequests: 47,
-      successful: 45,
-      failed: 2,
-      successRate: 0.957,
-      avgResponseTime: 340,
-    },
-  },
-  {
-    id: 'agent_002',
-    name: 'Daily Asana Digest',
-    description: 'Sends daily task summaries to Slack',
-    status: 'running',
-    triggerType: 'scheduled',
-    services: ['Asana', 'Slack'],
-    schedule: '0 9 * * *',
-    metrics: {
-      totalRequests: 30,
-      successful: 30,
-      failed: 0,
-      successRate: 1,
-      avgResponseTime: 520,
-    },
-  },
-  {
-    id: 'agent_003',
-    name: 'GitHub Issue Tracker',
-    description: 'Creates Discord notifications for GitHub issues',
-    status: 'error',
-    triggerType: 'webhook',
-    services: ['GitHub', 'Discord'],
-    metrics: {
-      totalRequests: 15,
-      successful: 10,
-      failed: 5,
-      successRate: 0.667,
-      avgResponseTime: 890,
-    },
-  },
-];
 
 export function Dashboard() {
   const { agents, setAgents, addAgent, removeAgent, updateAgent } = useAgents();
@@ -67,51 +15,24 @@ export function Dashboard() {
   const [filterStatus, setFilterStatus] = useState('all');
   const [showCreateModal, setShowCreateModal] = useState(false);
 
-  // Load mock data on mount
   useEffect(() => {
-    if (agents.length === 0) {
-      setAgents(mockAgents);
-    }
+    if (agents.length === 0) setAgents(mockAgents);
   }, [agents.length, setAgents]);
 
-  const statusOptions = [
-    { value: 'all', label: 'All Status' },
-    { value: 'running', label: 'Running' },
-    { value: 'stopped', label: 'Stopped' },
-    { value: 'error', label: 'Error' },
-  ];
+  const filteredAgents = agents
+    .filter(agent => filterStatus === 'all' || agent.status === filterStatus)
+    .filter(agent => !searchQuery || filterBySearchQuery([agent], searchQuery, ['name', 'description']).length > 0);
 
-  const filteredAgents = agents.filter(agent => {
-    const matchesSearch = agent.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          agent.description?.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesStatus = filterStatus === 'all' || agent.status === filterStatus;
-    return matchesSearch && matchesStatus;
-  });
-
-  const handleStart = (id) => {
-    updateAgent({ id, status: 'running' });
-  };
-
-  const handleStop = (id) => {
-    updateAgent({ id, status: 'stopped' });
-  };
-
+  const handleStart = (id) => updateAgent({ id, status: 'running' });
+  const handleStop = (id) => updateAgent({ id, status: 'stopped' });
+  
   const handleRestart = (id) => {
     updateAgent({ id, status: 'restarting' });
-    setTimeout(() => {
-      updateAgent({ id, status: 'running' });
-    }, 1500);
+    setTimeout(() => updateAgent({ id, status: 'running' }), 1500);
   };
 
   const handleDelete = (id) => {
-    if (window.confirm('Are you sure you want to delete this agent?')) {
-      removeAgent(id);
-    }
-  };
-
-  const handleSettings = (id) => {
-    // Navigate to agent settings or open settings modal
-    console.log('Settings for agent:', id);
+    if (window.confirm('Delete this agent?')) removeAgent(id);
   };
 
   const handleCreateComplete = (newAgent) => {
@@ -125,7 +46,7 @@ export function Dashboard() {
         <div className="page__header-content">
           <h1 className="page__title">My Agents</h1>
           <p className="page__description">
-            {agents.length} agent{agents.length !== 1 ? 's' : ''} deployed
+            {agents.length} {pluralize(agents.length, 'agent')} deployed
           </p>
         </div>
         <div className="page__actions">
@@ -144,7 +65,7 @@ export function Dashboard() {
           className="dashboard__search"
         />
         <Select
-          options={statusOptions}
+          options={STATUS_OPTIONS}
           value={filterStatus}
           onChange={(e) => setFilterStatus(e.target.value)}
           className="dashboard__filter"
@@ -160,13 +81,11 @@ export function Dashboard() {
               style={{ animationDelay: `${index * 0.1}s` }}
             >
             <AgentCard
-              key={agent.id}
               agent={agent}
               onStart={handleStart}
               onStop={handleStop}
               onRestart={handleRestart}
               onDelete={handleDelete}
-              onSettings={handleSettings}
             />
             </div>
           ))}

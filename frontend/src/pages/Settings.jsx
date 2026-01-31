@@ -1,16 +1,12 @@
-/**
- * Settings Page
- * User settings and preferences
- */
-
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { User, Key, Bell, Palette, Shield, Save } from 'lucide-react';
 import { Card, CardHeader, CardBody, Input, Button, Select } from '../components/common';
+import { THEME } from '../constants';
+import { getThemeFromStorage, setThemeInStorage } from '../utils';
 import './Settings.css';
 
 export function Settings() {
-  // Initialize theme from localStorage immediately
-  const savedTheme = localStorage.getItem('fuseai-theme') || 'light';
+  const savedTheme = getThemeFromStorage();
   
   const [formData, setFormData] = useState({
     name: 'John Doe',
@@ -24,25 +20,20 @@ export function Settings() {
   const [saved, setSaved] = useState(false);
 
   const handleSave = () => {
-    // Apply theme to document
-    document.documentElement.setAttribute('data-theme', formData.theme);
-    localStorage.setItem('fuseai-theme', formData.theme);
-    
+    setThemeInStorage(formData.theme);
     setSaved(true);
     setTimeout(() => setSaved(false), 3000);
   };
 
   const themeOptions = [
-    { value: 'light', label: 'Light' },
-    { value: 'dark', label: 'Dark' },
+    { value: THEME.LIGHT, label: 'Light' },
+    { value: THEME.DARK, label: 'Dark' },
   ];
 
-  // Preview theme change immediately
   const handleThemeChange = (e) => {
     const newTheme = e.target.value;
     setFormData({ ...formData, theme: newTheme });
-    document.documentElement.setAttribute('data-theme', newTheme);
-    localStorage.setItem('fuseai-theme', newTheme); // Save immediately
+    setThemeInStorage(newTheme);
   };
 
   return (

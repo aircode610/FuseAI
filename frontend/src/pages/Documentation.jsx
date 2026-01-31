@@ -1,8 +1,3 @@
-/**
- * Documentation Page
- * Explains FuseAI concept and how it works
- */
-
 import { Sparkles, Zap, Code, Rocket, Shield, Users, ClipboardList, MessageSquare, BarChart3, Bell, BookOpen } from 'lucide-react';
 import { Card, CardBody } from '../components/common';
 import './Documentation.css';

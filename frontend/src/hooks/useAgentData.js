@@ -1,26 +1,42 @@
 /**
- * Custom hook for fetching and managing agent data
+ * Custom hooks for agent data management
  */
 
 import { useState, useEffect, useCallback } from 'react';
 import { useAgents } from '../context/AgentContext';
 import agentService from '../services/agentService';
 
-export function useAgentData() {
-  const { 
-    agents, 
-    setAgents, 
-    addAgent, 
-    updateAgent, 
-    removeAgent,
-    loading,
-    setLoading,
-    error,
-    setError,
-    clearError,
-  } = useAgents();
+const useAsyncData = (fetcher, dependencies = []) => {
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
 
-  const fetchAgents = useCallback(async () => {
+  const fetch = useCallback(async (...args) => {
+    if (!dependencies.every(Boolean)) return;
+    
+    setLoading(true);
+    setError(null);
+    try {
+      const result = await fetcher(...args);
+      setData(result);
+      return result;
+    } catch (err) {
+      setError(err.message);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, dependencies);
+
+  useEffect(() => { fetch(); }, [fetch]);
+
+  return { data, loading, error, refetch: fetch };
+};
+
+export function useAgentData() {
+  const { agents, setAgents, addAgent, updateAgent, removeAgent, loading, setLoading, setError, clearError } = useAgents();
+
+  const fetchAgents = async () => {
     setLoading(true);
     clearError();
     try {
@@ -29,11 +45,10 @@ export function useAgentData() {
     } catch (err) {
       setError(err.message);
     }
-  }, [setAgents, setLoading, setError, clearError]);
+  };
 
-  const createAgent = useCallback(async (agentData) => {
+  const createAgent = async (agentData) => {
     setLoading(true);
-    clearError();
     try {
       const newAgent = await agentService.createAgent(agentData);
       addAgent(newAgent);
@@ -44,11 +59,10 @@ export function useAgentData() {
     } finally {
       setLoading(false);
     }
-  }, [addAgent, setLoading, setError, clearError]);
+  };
 
-  const deleteAgent = useCallback(async (agentId) => {
+  const deleteAgent = async (agentId) => {
     setLoading(true);
-    clearError();
     try {
       await agentService.deleteAgent(agentId);
       removeAgent(agentId);
@@ -58,38 +72,17 @@ export function useAgentData() {
     } finally {
       setLoading(false);
     }
-  }, [removeAgent, setLoading, setError, clearError]);
+  };
 
-  const startAgent = useCallback(async (agentId) => {
+  const agentAction = async (agentId, action, status) => {
     try {
-      await agentService.startAgent(agentId);
-      updateAgent({ id: agentId, status: 'running' });
+      await action(agentId);
+      updateAgent({ id: agentId, status });
     } catch (err) {
       setError(err.message);
       throw err;
     }
-  }, [updateAgent, setError]);
-
-  const stopAgent = useCallback(async (agentId) => {
-    try {
-      await agentService.stopAgent(agentId);
-      updateAgent({ id: agentId, status: 'stopped' });
-    } catch (err) {
-      setError(err.message);
-      throw err;
-    }
-  }, [updateAgent, setError]);
-
-  const restartAgent = useCallback(async (agentId) => {
-    try {
-      updateAgent({ id: agentId, status: 'restarting' });
-      await agentService.restartAgent(agentId);
-      updateAgent({ id: agentId, status: 'running' });
-    } catch (err) {
-      setError(err.message);
-      throw err;
-    }
-  }, [updateAgent, setError]);
+  };
 
   return {
     agents,
@@ -98,92 +91,18 @@ export function useAgentData() {
     fetchAgents,
     createAgent,
     deleteAgent,
-    startAgent,
-    stopAgent,
-    restartAgent,
+    startAgent: (id) => agentAction(id, agentService.startAgent, 'running'),
+    stopAgent: (id) => agentAction(id, agentService.stopAgent, 'stopped'),
+    restartAgent: async (id) => {
+      updateAgent({ id, status: 'restarting' });
+      await agentAction(id, agentService.restartAgent, 'running');
+    },
     clearError,
   };
 }
 
-export function useAgent(agentId) {
-  const [agent, setAgent] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-
-  const fetchAgent = useCallback(async () => {
-    if (!agentId) return;
-    
-    setLoading(true);
-    setError(null);
-    try {
-      const data = await agentService.getAgent(agentId);
-      setAgent(data);
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  }, [agentId]);
-
-  useEffect(() => {
-    fetchAgent();
-  }, [fetchAgent]);
-
-  return { agent, loading, error, refetch: fetchAgent };
-}
-
-export function useAgentLogs(agentId) {
-  const [logs, setLogs] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-
-  const fetchLogs = useCallback(async (params = {}) => {
-    if (!agentId) return;
-    
-    setLoading(true);
-    setError(null);
-    try {
-      const data = await agentService.getAgentLogs(agentId, params);
-      setLogs(data);
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  }, [agentId]);
-
-  useEffect(() => {
-    fetchLogs();
-  }, [fetchLogs]);
-
-  return { logs, loading, error, refetch: fetchLogs };
-}
-
-export function useAgentMetrics(agentId) {
-  const [metrics, setMetrics] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-
-  const fetchMetrics = useCallback(async (params = {}) => {
-    if (!agentId) return;
-    
-    setLoading(true);
-    setError(null);
-    try {
-      const data = await agentService.getAgentMetrics(agentId, params);
-      setMetrics(data);
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  }, [agentId]);
-
-  useEffect(() => {
-    fetchMetrics();
-  }, [fetchMetrics]);
-
-  return { metrics, loading, error, refetch: fetchMetrics };
-}
+export const useAgent = (agentId) => useAsyncData(() => agentService.getAgent(agentId), [agentId]);
+export const useAgentLogs = (agentId) => useAsyncData((params = {}) => agentService.getAgentLogs(agentId, params), [agentId]);
+export const useAgentMetrics = (agentId) => useAsyncData((params = {}) => agentService.getAgentMetrics(agentId, params), [agentId]);
 
 export default useAgentData;
