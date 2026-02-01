@@ -37,6 +37,7 @@ class DesignAgentState(TypedDict, total=False):
     available_zapier_tools: list[Any]  # LangChain tools from Zapier MCP
     selected_tool_names: list[str]
     selected_zapier_tools: list[dict[str, Any]]  # Serialized for coding agent
+    selected_tools_objects: list[Any]  # Actual LangChain tools to pass to code generator
     context_for_coding_agent: dict[str, Any]
 
 
@@ -70,18 +71,22 @@ async def load_zapier_tools(state: DesignAgentState) -> dict[str, Any]:
 # ---------------------------------------------------------------------------
 
 async def select_tools_with_llm_node(state: DesignAgentState) -> dict[str, Any]:
-    """Use LLM to select which Zapier tools are needed; save serialized tools to context."""
+    """Use LLM to select which Zapier tools are needed; save serialized tools and actual tool objects to context."""
     planner_context = state.get("planner_context") or {}
     available = state.get("available_zapier_tools") or []
     if not available:
         return {
             "selected_tool_names": [],
             "selected_zapier_tools": [],
+            "selected_tools_objects": [],
         }
     selected_names, selected_serialized = await select_tools_with_llm(planner_context, available)
+    names_set = {n.strip().lower() for n in selected_names if n}
+    selected_objects = [t for t in available if (getattr(t, "name", None) or "").strip().lower() in names_set]
     return {
         "selected_tool_names": selected_names,
         "selected_zapier_tools": selected_serialized,
+        "selected_tools_objects": selected_objects,
     }
 
 

@@ -41,7 +41,7 @@ def main() -> None:
     )
     parser.add_argument(
         "--prompt",
-        default="Analyze cards in a Trello board and create events in Google Calendar for each card.",
+        default="Analyze cards in a Trello board and give a summary of the cards and their status.",
         help="Task prompt for the design agent",
     )
     args = parser.parse_args()
