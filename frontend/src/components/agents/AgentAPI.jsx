@@ -43,6 +43,7 @@ export function AgentAPI({ agent }) {
   const [pathValues, setPathValues] = useState({});
   const [queryValues, setQueryValues] = useState({});
   const [requestBody, setRequestBody] = useState('{}');
+  const [inputMode, setInputMode] = useState('fields'); // 'fields' | 'json' | 'curl'
 
   useEffect(() => {
     const pv = {};
@@ -222,7 +223,7 @@ export function AgentAPI({ agent }) {
         ))
       )}
 
-      {/* Try It Out — one section per selected endpoint */}
+      {/* Try It Out — Fields / JSON / cURL + Send Request lower */}
       {selectedEndpoint && (
         <Card padding="none">
           <CardHeader>
@@ -246,26 +247,111 @@ export function AgentAPI({ agent }) {
               </div>
             )}
 
-            {pathParams.length > 0 && (
-              <div className="api-playground__input">
-                <label className="api-playground__label">Path parameters</label>
-                <div className="api-playground__params">
-                  {pathParams.map((p) => (
-                    <input
-                      key={p.name}
-                      placeholder={p.name}
-                      value={pathValues[p.name] ?? ''}
-                      onChange={(e) =>
-                        setPathValues((prev) => ({ ...prev, [p.name]: e.target.value }))
-                      }
-                      className="api-playground__param-input"
-                    />
-                  ))}
-                </div>
+            {/* Input mode: Fields | JSON | cURL */}
+            <div className="api-playground__mode-tabs">
+              {['fields', 'json', 'curl'].map((mode) => (
+                <button
+                  key={mode}
+                  type="button"
+                  className={`api-playground__mode-tab ${inputMode === mode ? 'api-playground__mode-tab--active' : ''}`}
+                  onClick={() => setInputMode(mode)}
+                >
+                  {mode === 'fields' && 'Fields'}
+                  {mode === 'json' && 'JSON'}
+                  {mode === 'curl' && 'cURL'}
+                </button>
+              ))}
+            </div>
+
+            {/* Fields: one input per param */}
+            {inputMode === 'fields' && (
+              <div className="api-playground__fields">
+                {pathParams.length === 0 && queryParams.length === 0 && bodyParams.length === 0 && method !== 'GET' && (
+                  <p className="api-info__hint">No parameters for this endpoint. Use JSON mode to send an empty body or optional fields.</p>
+                )}
+                {pathParams.length > 0 && (
+                  <div className="api-playground__input">
+                    <label className="api-playground__label">Path parameters</label>
+                    <div className="api-playground__params">
+                      {pathParams.map((p) => (
+                        <div key={p.name} className="api-playground__field">
+                          <label className="api-playground__field-label">{p.name}</label>
+                          <input
+                            placeholder={p.description || p.name}
+                            value={pathValues[p.name] ?? ''}
+                            onChange={(e) =>
+                              setPathValues((prev) => ({ ...prev, [p.name]: e.target.value }))
+                            }
+                            className="api-playground__param-input"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {queryParams.length > 0 && (
+                  <div className="api-playground__input">
+                    <label className="api-playground__label">Query parameters</label>
+                    <div className="api-playground__params">
+                      {queryParams.map((p) => (
+                        <div key={p.name} className="api-playground__field">
+                          <label className="api-playground__field-label">{p.name}</label>
+                          <input
+                            placeholder={p.description || p.name}
+                            value={queryValues[p.name] ?? ''}
+                            onChange={(e) =>
+                              setQueryValues((prev) => ({ ...prev, [p.name]: e.target.value }))
+                            }
+                            className="api-playground__param-input"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {(bodyParams.length > 0 || (method !== 'GET' && !pathParams.length && !queryParams.length)) && (
+                  <div className="api-playground__input">
+                    <label className="api-playground__label">Body parameters</label>
+                    <div className="api-playground__params api-playground__params--vertical">
+                      {(bodyParams.length > 0 ? bodyParams : [{ name: 'body', type: 'str', description: 'JSON body' }]).map((p) => (
+                        <div key={p.name} className="api-playground__field">
+                          <label className="api-playground__field-label">
+                            {p.name}
+                            {p.description && <span className="api-playground__field-desc"> — {p.description}</span>}
+                          </label>
+                          <input
+                            type={p.type === 'int' || p.type === 'integer' ? 'number' : 'text'}
+                            placeholder={p.description || p.name}
+                            value={(() => {
+                              try {
+                                const b = JSON.parse(requestBody || '{}');
+                                const v = b[p.name];
+                                return v === undefined ? '' : String(v);
+                              } catch { return ''; }
+                            })()}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              try {
+                                const b = JSON.parse(requestBody || '{}');
+                                if (p.type === 'int' || p.type === 'integer') b[p.name] = val === '' ? 0 : parseInt(val, 10);
+                                else b[p.name] = val;
+                                setRequestBody(JSON.stringify(b, null, 2));
+                              } catch {
+                                setRequestBody(JSON.stringify({ [p.name]: val }, null, 2));
+                              }
+                            }}
+                            className="api-playground__param-input"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
-            {bodyParams.length > 0 && (
+            {/* JSON: raw request body */}
+            {inputMode === 'json' && (
               <div className="api-playground__input">
                 <label className="api-playground__label">Request Body</label>
                 <Textarea
@@ -277,27 +363,30 @@ export function AgentAPI({ agent }) {
               </div>
             )}
 
-            {bodyParams.length === 0 && method !== 'GET' && (
+            {/* cURL: copy command */}
+            {inputMode === 'curl' && (
               <div className="api-playground__input">
-                <label className="api-playground__label">Request Body (optional)</label>
-                <Textarea
-                  value={requestBody}
-                  onChange={(e) => setRequestBody(e.target.value)}
-                  rows={4}
-                  className="api-playground__textarea"
-                />
+                <label className="api-playground__label">cURL command</label>
+                <div className="api-playground__curl-wrap">
+                  <pre className="api-curl">{generateCurl()}</pre>
+                  <Button variant="ghost" size="sm" icon={Copy} onClick={() => copyToClipboard(generateCurl())}>
+                    Copy
+                  </Button>
+                </div>
               </div>
             )}
 
-            <Button
-              icon={Play}
-              onClick={sendRequest}
-              loading={loading}
-              disabled={agent.status !== 'running'}
-              className="api-playground__submit"
-            >
-              Send Request
-            </Button>
+            <div className="api-playground__submit-wrap">
+              <Button
+                icon={Play}
+                onClick={sendRequest}
+                loading={loading}
+                disabled={agent.status !== 'running'}
+                className="api-playground__submit"
+              >
+                Send Request
+              </Button>
+            </div>
 
             {response && (
               <div className="api-playground__response">
@@ -322,27 +411,6 @@ export function AgentAPI({ agent }) {
         </Card>
       )}
 
-      {baseUrl && selectedEndpoint && (
-        <Card padding="none">
-          <CardHeader
-            actions={
-              <Button
-                variant="ghost"
-                size="sm"
-                icon={Copy}
-                onClick={() => copyToClipboard(generateCurl())}
-              >
-                Copy
-              </Button>
-            }
-          >
-            <h3>cURL Command</h3>
-          </CardHeader>
-          <CardBody>
-            <pre className="api-curl">{generateCurl()}</pre>
-          </CardBody>
-        </Card>
-      )}
     </div>
   );
 }

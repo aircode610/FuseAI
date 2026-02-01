@@ -53,17 +53,20 @@ def _format_request_context(ctx: dict[str, Any]) -> str:
 async def run_agent(task_prompt: str, system_prompt: str, tools: list) -> dict[str, Any]:
     if not tools:
         return {"success": False, "result": "", "error": "No tools provided."}
-    model = _get_model()
-    agent = create_react_agent(model, tools)
-    messages = [SystemMessage(content=system_prompt), HumanMessage(content=task_prompt)]
-    result = await agent.ainvoke({"messages": messages})
-    msg_list = result.get("messages") or []
-    last_content = ""
-    for m in reversed(msg_list):
-        if hasattr(m, "content") and isinstance(m.content, str) and m.content.strip():
-            last_content = m.content.strip()
-            break
-    return {"success": True, "result": last_content or str(result), "error": None}
+    try:
+        model = _get_model()
+        agent = create_react_agent(model, tools)
+        messages = [SystemMessage(content=system_prompt), HumanMessage(content=task_prompt)]
+        result = await agent.ainvoke({"messages": messages})
+        msg_list = result.get("messages") or []
+        last_content = ""
+        for m in reversed(msg_list):
+            if hasattr(m, "content") and isinstance(m.content, str) and m.content.strip():
+                last_content = m.content.strip()
+                break
+        return {"success": True, "result": last_content or str(result), "error": None}
+    except Exception as e:
+        return {"success": False, "result": "", "error": f"Request processing error: {e!r}"}
 
 
 def create_app(tools: list) -> FastAPI:

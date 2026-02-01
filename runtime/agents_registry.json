@@ -99,7 +99,40 @@
       "task_description": "Task: create an agent which summarizes my last n emails\nWorkflow steps (execute in order):\n  1. Connect to Gmail account (Gmail) \u2014 Establish authentication and connection to access Gmail data\n  2. Get the last n emails from inbox (Gmail) \u2014 Retrieve the specified number of most recent emails with their content, subject, sender, and date\n  3. Extract email content and metadata (Gmail) \u2014 Parse each email to get subject, sender, date, and body text for processing\n  4. Summarize the collection of emails \u2014 Generate a concise summary covering key topics, important information, and overall themes from the emails\n  5. Format and present the summary \u2014 Structure the summary in a readable format with key insights and important details highlighted\nEndpoint 0: POST /summarize-emails \u2014 Fetch the last n emails from Gmail and generate an AI summary of their contents\nServices: Gmail\nParameters:\n- n (int, body, endpoint 0): Specifies how many of the most recent emails to retrieve and summarize",
       "port": 8003,
       "created_at": "2026-02-01T06:28:12Z"
+    },
+    {
+      "id": "agent_1769927611",
+      "name": "Gmail Email Summarizer",
+      "description": "Task: create an agent which summarizes my last n emails\nWorkflow steps (execute in order):\n  1. Get the last n emails from inbox (Gmail) \u2014 Fetches the most recent n email messages from the user's Gmai",
+      "prompt": "create an agent which summarizes my last n emails",
+      "status": "deploying",
+      "triggerType": "on_demand",
+      "services": [
+        "Gmail"
+      ],
+      "endpoints": [
+        {
+          "method": "POST",
+          "path": "/summarize-recent-emails",
+          "operation_id": "summarize_recent_emails",
+          "summary": "Fetch the last n emails from Gmail and generate a summary of their content",
+          "path_parameters": [],
+          "query_parameters": [
+            {
+              "name": "n",
+              "type": "int",
+              "description": "Number of last emails to retrieve and summarize",
+              "required": true,
+              "location": "query"
+            }
+          ],
+          "body_parameters": []
+        }
+      ],
+      "task_description": "Task: create an agent which summarizes my last n emails\nWorkflow steps (execute in order):\n  1. Get the last n emails from inbox (Gmail) \u2014 Fetches the most recent n email messages from the user's Gmail inbox\n  2. Extract email content and metadata (Gmail) \u2014 Retrieves the subject, sender, date, and body content from each email\n  3. Summarize the email contents into a consolidated report \u2014 Creates a summary text highlighting key information, themes, and important details from all the emails\nEndpoint 0: POST /summarize-recent-emails \u2014 Fetch the last n emails from Gmail and generate a summary of their content\nServices: Gmail\nParameters:\n- n (int, query, endpoint 0): Specifies how many of the most recent emails to fetch from Gmail for summarization",
+      "port": 8004,
+      "created_at": "2026-02-01T06:33:43Z"
     }
   ],
-  "next_port": 8004
+  "next_port": 8005
 }
