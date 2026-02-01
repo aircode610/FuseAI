@@ -24,10 +24,17 @@ from core.planner import run_planner
 from core.api_designer import run_api_designer
 
 
-DEFAULT_PROMPT = """Create an API that collects feedback from a Slack channel's messages 
-from the last week, analyzes sentiment and themes, creates a summary 
-document in Google Docs with categorized feedback, and creates Trello 
-cards for each action item
+DEFAULT_PROMPT = """
+Create an API that:
+
+1. Analyzes our current sprint - get all Trello cards for this sprint, 
+   check their progress, calculate velocity, identify risks (overdue cards, 
+   blocked items, unassigned work), and post a health report to Slack
+
+2. Take corrective action - when we're behind, automatically reassign cards 
+   from overloaded team members to available ones, update due dates to be 
+   realistic, and notify affected people in Slack
+
 """
 
 
