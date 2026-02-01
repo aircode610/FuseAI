@@ -18,7 +18,7 @@ from core.models import (
     WorkflowStepItem,
     WorkflowStepsOutput,
 )
-from core.planner_prompts import (
+from core.prompts import (
     format_extract_parameters,
     format_extract_services,
     format_extract_workflow_steps,
