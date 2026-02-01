@@ -50,12 +50,14 @@ Do NOT add:
 - Format or preference options (summary_format, output_format, etc.)
 - Any parameter that is not directly stated or clearly implied by the task.
 
-For each parameter: name (snake_case), type (str, int, or bool), description, required (true), location (path, query, or body), and how_used (one sentence).
+For each parameter: name (snake_case), type, description, required (true/false), location (path, query, or body), how_used, and optionally endpoint_index.
 
+- type: use str, int, bool, float for scalars; use list[str], list[int], list[float], or list[dict] when the input is clearly a list (e.g. "list of emails", "multiple IDs").
 - location "path": for resource identifiers in URLs (e.g. GET /contacts/{email}, PUT /tickets/{ticket_id}).
 - location "query": for required query args (use sparingly; prefer body for POST).
 - location "body": for main payload (POST/PUT body).
 - how_used: concise, e.g. "Person whose Trello cards to fetch", "Slack channel or user ID to send the summary to".
+- endpoint_index: 0-based index of which endpoint this parameter belongs to, when the task describes multiple distinct operations (e.g. "create a card and list channels" → two endpoints; params for "create card" get 0, params for "list channels" get 1). Use 0 for single-endpoint tasks or when unsure.
 
 Keep the list minimal: only parameters the user would have to supply to run the described workflow.
 """
@@ -65,27 +67,35 @@ EXTRACT_PARAMETERS_USER = """Workflow task:
 
 Services involved: {services}
 
-List ONLY the parameters that are explicitly required by this task (mentioned or clearly implied). Do not add optional filters or format options. For each parameter include name (snake_case), type, description, required=true, location (path/query/body), and how_used.
+List ONLY the parameters that are explicitly required by this task (mentioned or clearly implied). Do not add optional filters or format options. For each parameter include name (snake_case), type (str, int, bool, float, or list[str]/list[int]/list[dict] for lists), description, required, location (path/query/body), how_used, and endpoint_index (0-based, when the task has multiple distinct operations).
 """
 
 
 # ---------------------------------------------------------------------------
-# Step 4: Suggest HTTP method and path slug
+# Step 4: Suggest one or more REST endpoints
 # ---------------------------------------------------------------------------
 
-SUGGEST_ENDPOINT_SYSTEM = """You suggest REST endpoint details for a workflow task. Given the task and the services, suggest the HTTP method and a short path slug.
+SUGGEST_ENDPOINTS_SYSTEM = """You suggest REST endpoint(s) for a workflow task. A task may need a single endpoint (e.g. "get Trello cards and send to Slack") or multiple endpoints (e.g. "create a Trello card and list Slack channels" → create-card + list-channels).
 
+For each endpoint:
 - method: GET for read/fetch/list, POST for create/send/sync/summarize, PUT for update, DELETE for remove/cleanup.
-- path_slug: short, hyphenated, e.g. summarize-cards, contacts, sync-issues, tickets, cards/cleanup. No leading slash.
+- path_slug: short, hyphenated, e.g. summarize-cards, create-card, list-channels, tickets, cards/cleanup. No leading slash.
+- summary: one short line describing what this endpoint does.
+
+Return one endpoint for a single-operation task; return multiple endpoints when the task clearly describes multiple distinct operations (e.g. "X and also Y", "first do A then B").
 """
 
-SUGGEST_ENDPOINT_USER = """Workflow task:
+SUGGEST_ENDPOINTS_USER = """Workflow task:
 {user_prompt}
 
 Services: {services}
 
-Suggest the HTTP method and path slug for the API endpoint.
+Suggest one or more REST endpoints. For each: method, path_slug, and a one-line summary.
 """
+
+# Backward-compat: single-endpoint formatters (used when LLM returns one endpoint)
+SUGGEST_ENDPOINT_SYSTEM = SUGGEST_ENDPOINTS_SYSTEM
+SUGGEST_ENDPOINT_USER = SUGGEST_ENDPOINTS_USER
 
 
 # ---------------------------------------------------------------------------

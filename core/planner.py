@@ -45,7 +45,7 @@ class ParameterItem(BaseModel):
     """One API parameter for extract_parameters step."""
 
     name: str = Field(description="snake_case parameter name")
-    type: str = Field(default="str", description="str, int, or bool")
+    type: str = Field(default="str", description="str, int, bool, float, or list[str]/list[int]/list[dict]")
     description: str = Field(default="", description="What this parameter is for")
     required: bool = Field(default=True, description="Whether the parameter is required")
     location: Literal["path", "query", "body"] = Field(
@@ -53,6 +53,7 @@ class ParameterItem(BaseModel):
         description="path, query, or body",
     )
     how_used: str = Field(default="", description="How this parameter is used in the task")
+    endpoint_index: int = Field(default=0, description="0-based index of which endpoint this param belongs to (for multi-endpoint tasks)")
 
 
 class ParametersOutput(BaseModel):
@@ -61,11 +62,21 @@ class ParametersOutput(BaseModel):
     parameters: list[ParameterItem] = Field(default_factory=list, description="API parameters")
 
 
-class EndpointOutput(BaseModel):
-    """LLM output for suggest_endpoint step."""
+class EndpointHint(BaseModel):
+    """One suggested endpoint for suggest_endpoints step."""
 
     method: str = Field(default="POST", description="GET, POST, PUT, DELETE, or PATCH")
     path_slug: str = Field(default="execute", description="Short hyphenated slug, no leading slash")
+    summary: str = Field(default="", description="One-line summary of what this endpoint does")
+
+
+class EndpointsOutput(BaseModel):
+    """LLM output for suggest_endpoints step (one or more endpoints)."""
+
+    endpoints: list[EndpointHint] = Field(
+        default_factory=list,
+        description="One or more REST endpoints for this task",
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -84,6 +95,7 @@ class ParameterSpec(TypedDict, total=False):
     required: bool
     location: ParamLocation
     how_used: str
+    endpoint_index: int
 
 
 class ValidationResult(TypedDict, total=False):
@@ -102,6 +114,7 @@ class PlannerState(TypedDict, total=False):
     parameters: list[ParameterSpec]
     suggested_http_method: str
     suggested_path_slug: str
+    suggested_endpoints: list[dict[str, Any]]
     task_description: str
     errors: Annotated[list[str], lambda a, b: (a or []) + (b or [])]
 
@@ -189,6 +202,7 @@ def extract_parameters(state: PlannerState) -> dict[str, Any]:
                 "required": p.required,
                 "location": p.location,
                 "how_used": p.how_used,
+                "endpoint_index": getattr(p, "endpoint_index", 0),
             }
             for p in out.parameters
         ]
@@ -202,19 +216,36 @@ def extract_parameters(state: PlannerState) -> dict[str, Any]:
 # ---------------------------------------------------------------------------
 
 def suggest_endpoint(state: PlannerState) -> dict[str, Any]:
-    """Suggest HTTP method and path slug. Uses SUGGEST_ENDPOINT prompt."""
+    """Suggest one or more REST endpoints. Uses SUGGEST_ENDPOINTS prompt."""
     user_prompt = state.get("user_prompt") or ""
     services = state.get("services") or []
     system, user = format_suggest_endpoint(user_prompt, services)
     try:
-        out = _invoke_structured(system, user, EndpointOutput)
-        method = (out.method or "POST").upper()
-        if method not in ("GET", "POST", "PUT", "DELETE", "PATCH"):
-            method = "POST"
-        path_slug = (out.path_slug or "execute").strip().strip("/").replace(" ", "-")
-        return {"suggested_http_method": method, "suggested_path_slug": path_slug or "execute"}
+        out = _invoke_structured(system, user, EndpointsOutput)
+        endpoints_list = out.endpoints or []
+        if not endpoints_list:
+            endpoints_list = [EndpointHint(method="POST", path_slug="execute", summary="Execute the workflow")]
+        suggested_endpoints: list[dict[str, Any]] = []
+        for e in endpoints_list:
+            method = (e.method or "POST").upper()
+            if method not in ("GET", "POST", "PUT", "DELETE", "PATCH"):
+                method = "POST"
+            path_slug = (e.path_slug or "execute").strip().strip("/").replace(" ", "-") or "execute"
+            suggested_endpoints.append({
+                "method": method,
+                "path_slug": path_slug,
+                "summary": (e.summary or "").strip(),
+            })
+        first = suggested_endpoints[0]
+        return {
+            "suggested_endpoints": suggested_endpoints,
+            "suggested_http_method": first["method"],
+            "suggested_path_slug": first["path_slug"],
+            "errors": [],
+        }
     except Exception as e:
         return {
+            "suggested_endpoints": [{"method": "POST", "path_slug": "execute", "summary": "Execute the workflow"}],
             "suggested_http_method": "POST",
             "suggested_path_slug": "execute",
             "errors": [f"Suggest endpoint failed: {e}"],
@@ -230,13 +261,19 @@ def format_task_description(state: PlannerState) -> dict[str, Any]:
     user_prompt = state.get("user_prompt") or ""
     services = state.get("services") or []
     parameters = state.get("parameters") or []
+    suggested_endpoints = state.get("suggested_endpoints") or []
     method = state.get("suggested_http_method") or "POST"
     path_slug = state.get("suggested_path_slug") or "execute"
 
-    parts = [
-        f"Task: {user_prompt}",
-        f"Suggested endpoint: {method} /{path_slug}",
-    ]
+    parts = [f"Task: {user_prompt}"]
+    if suggested_endpoints:
+        for i, ep in enumerate(suggested_endpoints):
+            m = ep.get("method", "POST")
+            slug = ep.get("path_slug", "execute")
+            summary = ep.get("summary", "")
+            parts.append(f"Endpoint {i}: {m} /{slug}" + (f" — {summary}" if summary else ""))
+    else:
+        parts.append(f"Suggested endpoint: {method} /{path_slug}")
     if services:
         parts.append(f"Services: {', '.join(services)}")
     if parameters:
@@ -244,7 +281,8 @@ def format_task_description(state: PlannerState) -> dict[str, Any]:
         for p in parameters:
             loc = p.get("location", "body")
             how = p.get("how_used", "")
-            param_lines.append(f"- {p.get('name', '')} ({p.get('type', 'str')}, {loc}): {how or p.get('description', '')}")
+            ei = p.get("endpoint_index", 0)
+            param_lines.append(f"- {p.get('name', '')} ({p.get('type', 'str')}, {loc}, endpoint {ei}): {how or p.get('description', '')}")
         parts.append("Parameters:\n" + "\n".join(param_lines))
 
     return {"task_description": "\n".join(parts)}

@@ -1,9 +1,9 @@
 """
-API Designer: turns planner output into a single-endpoint API design.
+API Designer: turns planner output into an API design (one or more endpoints).
 
-Consumes PlannerState (services, parameters, suggested_http_method,
-suggested_path_slug, task_description) and produces an APIEndpointDesign
-in a format ready for the code generator to turn into FastAPI code.
+Consumes PlannerState (services, parameters, suggested_endpoints or
+suggested_http_method/suggested_path_slug, task_description) and produces
+an APIDesign in a format ready for the code generator to turn into FastAPI code.
 """
 
 from __future__ import annotations
@@ -19,14 +19,13 @@ from pydantic import BaseModel, Field
 
 ParamLocation = Literal["path", "query", "body"]
 
-
 class ParameterDesign(BaseModel):
     """One parameter in the API design (path, query, or body)."""
 
     name: str = Field(description="snake_case name for FastAPI")
-    type: Literal["str", "int", "bool", "float"] = Field(
+    type: str = Field(
         default="str",
-        description="Python/FastAPI type",
+        description="Python/FastAPI type: str, int, bool, float, or list[str], list[int], list[dict], etc.",
     )
     description: str = Field(default="", description="For OpenAPI/docs")
     required: bool = Field(default=True, description="Whether the parameter is required")
@@ -79,7 +78,20 @@ class APIEndpointDesign(BaseModel):
         default="Result of the operation",
         description="Description for the response in OpenAPI",
     )
-    # Optional: keep services for code gen (e.g. for task prompt or docs)
+
+
+class APIDesign(BaseModel):
+    """
+    Full API design: one or more endpoints, ready for code generator.
+
+    The code generator will iterate over endpoints and generate one route per
+    endpoint, with path/query/body params and request body models as needed.
+    """
+
+    endpoints: list[APIEndpointDesign] = Field(
+        default_factory=list,
+        description="One or more REST endpoints to generate",
+    )
     services: list[str] = Field(
         default_factory=list,
         description="Services involved (e.g. Trello, Slack) for context",
@@ -94,11 +106,13 @@ class APIEndpointDesign(BaseModel):
 # Design from planner state (deterministic, no LLM)
 # ---------------------------------------------------------------------------
 
-def _normalize_type(t: str) -> Literal["str", "int", "bool", "float"]:
-    """Map planner type string to allowed FastAPI type."""
+def _normalize_type(t: str) -> str:
+    """Map planner type string to FastAPI/Pydantic type string (scalars and lists)."""
     if not t:
         return "str"
-    t = (t or "").strip().lower()
+    raw = (t or "").strip()
+    t = raw.lower()
+    # Scalars
     if t in ("str", "string"):
         return "str"
     if t in ("int", "integer"):
@@ -107,6 +121,22 @@ def _normalize_type(t: str) -> Literal["str", "int", "bool", "float"]:
         return "bool"
     if t in ("float", "number"):
         return "float"
+    # List types (exact or normalized)
+    if t.startswith("list[") and "]" in t:
+        inner = t[5:t.index("]")].strip().lower()
+        if inner in ("str", "string"):
+            return "list[str]"
+        if inner in ("int", "integer"):
+            return "list[int]"
+        if inner in ("float", "number"):
+            return "list[float]"
+        if inner in ("bool", "boolean"):
+            return "list[bool]"
+        if inner in ("dict", "object"):
+            return "list[dict]"
+        return "list[str]"
+    if t in ("list", "array"):
+        return "list[str]"
     return "str"
 
 
@@ -117,30 +147,18 @@ def _slug_to_operation_id(slug: str) -> str:
     return slug.strip().strip("/").replace("-", "_").replace(" ", "_") or "execute"
 
 
-def design_from_planner_state(planner_state: dict[str, Any]) -> APIEndpointDesign:
-    """
-    Build an API endpoint design from planner output.
-
-    - Uses suggested_http_method and suggested_path_slug.
-    - Splits parameters by location into path_parameters, query_parameters, body_parameters.
-    - Builds path string with path params (e.g. /cards/{board_id}).
-    - Sets operation_id and summary from path_slug and task_description.
-    """
-    method = (planner_state.get("suggested_http_method") or "POST").upper()
-    if method not in ("GET", "POST", "PUT", "DELETE", "PATCH"):
-        method = "POST"
-
-    path_slug = (planner_state.get("suggested_path_slug") or "execute").strip().strip("/").replace(" ", "-") or "execute"
-    raw_params: list[dict[str, Any]] = planner_state.get("parameters") or []
-    services: list[str] = list(planner_state.get("services") or [])
-    task_description: str = (planner_state.get("task_description") or "").strip()
-
-    # Split by location and build ParameterDesign list
+def _build_one_endpoint(
+    method: str,
+    path_slug: str,
+    endpoint_summary: str,
+    raw_params_for_this_endpoint: list[dict[str, Any]],
+) -> APIEndpointDesign:
+    """Build a single APIEndpointDesign from method, slug, summary, and params."""
     path_params: list[ParameterDesign] = []
     query_params: list[ParameterDesign] = []
     body_params: list[ParameterDesign] = []
 
-    for p in raw_params:
+    for p in raw_params_for_this_endpoint:
         name = (p.get("name") or "param").strip()
         if not name:
             continue
@@ -161,25 +179,14 @@ def design_from_planner_state(planner_state: dict[str, Any]) -> APIEndpointDesig
         else:
             body_params.append(param)
 
-    # Build path: /slug or /slug/{param1}/{param2}
     path_segments = [path_slug]
     for pp in path_params:
         path_segments.append(f"{{{pp.name}}}")
     path = "/" + "/".join(path_segments)
 
     operation_id = _slug_to_operation_id(path_slug)
-    # First line of task description as summary, or derived from slug
-    summary = "Execute the workflow"
-    if task_description:
-        first_line = task_description.split("\n")[0].strip()
-        if first_line.lower().startswith("task:"):
-            summary = first_line[5:].strip()[:120] or summary
-        else:
-            summary = first_line[:120] or summary
-
-    response_description = "Result of the operation"
-    if task_description:
-        response_description = f"Result for: {task_description.split(chr(10))[0].strip()[:80]}"
+    summary = endpoint_summary[:120] if endpoint_summary else "Execute the workflow"
+    response_description = f"Result for: {summary[:80]}" if summary else "Result of the operation"
 
     return APIEndpointDesign(
         method=method,
@@ -190,16 +197,67 @@ def design_from_planner_state(planner_state: dict[str, Any]) -> APIEndpointDesig
         query_parameters=query_params,
         body_parameters=body_params,
         response_description=response_description,
+    )
+
+
+def design_from_planner_state(planner_state: dict[str, Any]) -> APIDesign:
+    """
+    Build an API design (one or more endpoints) from planner output.
+
+    - If suggested_endpoints is present: one endpoint per entry; parameters are
+      assigned by endpoint_index (params with endpoint_index == i go to endpoint i).
+    - If only suggested_http_method/suggested_path_slug: single endpoint (backward compat).
+    - Parameter types support scalars and lists (str, int, list[str], list[int], etc.).
+    """
+    raw_params: list[dict[str, Any]] = planner_state.get("parameters") or []
+    services: list[str] = list(planner_state.get("services") or [])
+    task_description: str = (planner_state.get("task_description") or "").strip()
+    suggested_endpoints: list[dict[str, Any]] = planner_state.get("suggested_endpoints") or []
+
+    if not suggested_endpoints:
+        # Backward compat: single endpoint from suggested_http_method / suggested_path_slug
+        method = (planner_state.get("suggested_http_method") or "POST").upper()
+        if method not in ("GET", "POST", "PUT", "DELETE", "PATCH"):
+            method = "POST"
+        path_slug = (planner_state.get("suggested_path_slug") or "execute").strip().strip("/").replace(" ", "-") or "execute"
+        summary = "Execute the workflow"
+        if task_description:
+            first_line = task_description.split("\n")[0].strip()
+            if first_line.lower().startswith("task:"):
+                summary = first_line[5:].strip()[:120] or summary
+            else:
+                summary = first_line[:120] or summary
+        suggested_endpoints = [{"method": method, "path_slug": path_slug, "summary": summary}]
+
+    endpoints: list[APIEndpointDesign] = []
+    for i, ep in enumerate(suggested_endpoints):
+        method = (ep.get("method") or "POST").upper()
+        if method not in ("GET", "POST", "PUT", "DELETE", "PATCH"):
+            method = "POST"
+        path_slug = (ep.get("path_slug") or "execute").strip().strip("/").replace(" ", "-") or "execute"
+        summary = (ep.get("summary") or "").strip() or "Execute the workflow"
+        params_for_i = [p for p in raw_params if p.get("endpoint_index", 0) == i]
+        endpoints.append(
+            _build_one_endpoint(
+                method=method,
+                path_slug=path_slug,
+                endpoint_summary=summary,
+                raw_params_for_this_endpoint=params_for_i,
+            )
+        )
+
+    return APIDesign(
+        endpoints=endpoints,
         services=services,
         task_description=task_description,
     )
 
 
-def run_api_designer(planner_state: dict[str, Any]) -> APIEndpointDesign:
+def run_api_designer(planner_state: dict[str, Any]) -> APIDesign:
     """
     Run the API designer on planner output.
 
     This is the main entry point for the pipeline: planner state in,
-    APIEndpointDesign out (for the code generator).
+    APIDesign out (one or more endpoints for the code generator).
     """
     return design_from_planner_state(planner_state)

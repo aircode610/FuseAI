@@ -24,7 +24,11 @@ from core.planner import run_planner
 from core.api_designer import run_api_designer
 
 
-DEFAULT_PROMPT = "Get all Trello cards for a person and send them a summarization in Slack"
+DEFAULT_PROMPT = """Create an API that collects feedback from a Slack channel's messages 
+from the last week, analyzes sentiment and themes, creates a summary 
+document in Google Docs with categorized feedback, and creates Trello 
+cards for each action item
+"""
 
 
 def main() -> None:
@@ -37,7 +41,7 @@ def main() -> None:
         print("Planner errors:", planner_state["errors"])
     design = run_api_designer(planner_state)
 
-    print("--- API Endpoint Design (code-gen ready) ---")
+    print("--- API Design (code-gen ready, %d endpoint(s)) ---" % len(design.endpoints))
     print(design.model_dump_json(indent=2))
 
 
