@@ -4,20 +4,33 @@ import { Button, Input, Select, Modal } from '../components/common';
 import { AgentCard } from '../components/agents';
 import { CreateAgentWizard } from '../components/wizard';
 import { useAgents } from '../context/AgentContext';
+import agentService from '../services/agentService';
 import { mockAgents } from '../mocks/agents';
 import { STATUS_OPTIONS } from '../constants';
 import { filterBySearchQuery, pluralize } from '../utils';
 import './Dashboard.css';
 
 export function Dashboard() {
-  const { agents, setAgents, addAgent, removeAgent, updateAgent } = useAgents();
+  const { agents, setAgents, addAgent, removeAgent, updateAgent, setLoading } = useAgents();
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   const [showCreateModal, setShowCreateModal] = useState(false);
 
   useEffect(() => {
-    if (agents.length === 0) setAgents(mockAgents);
-  }, [agents.length, setAgents]);
+    let cancelled = false;
+    setLoading(true);
+    agentService.getAgents()
+      .then((list) => {
+        if (!cancelled) setAgents(Array.isArray(list) ? list : []);
+      })
+      .catch(() => {
+        if (!cancelled) setAgents(mockAgents);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, [setAgents, setLoading]);
 
   const filteredAgents = agents
     .filter(agent => filterStatus === 'all' || agent.status === filterStatus)

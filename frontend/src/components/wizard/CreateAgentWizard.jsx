@@ -1,11 +1,14 @@
 /**
  * CreateAgentWizard Component
- * Multi-step wizard for creating new agents
+ * Multi-step wizard for creating new agents.
+ * Step 0: prompt → "Analyze" calls backend to create + generate + deploy agent.
+ * Step 1: review plan (from API). Step 2: configure. "Deploy Agent" adds agent to UI.
  */
 
 import { useState } from 'react';
 import { Wand2, ArrowRight, ArrowLeft, Check, Loader, Zap, Clock, Webhook, Settings } from 'lucide-react';
 import { Button, Input, Textarea, Select, Card, CardBody } from '../common';
+import agentService from '../../services/agentService';
 import './CreateAgentWizard.css';
 
 const STEPS = [
@@ -17,6 +20,7 @@ const STEPS = [
 export function CreateAgentWizard({ onComplete, onCancel }) {
   const [currentStep, setCurrentStep] = useState(0);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [createError, setCreateError] = useState(null);
   const [formData, setFormData] = useState({
     prompt: '',
     name: '',
@@ -36,41 +40,26 @@ export function CreateAgentWizard({ onComplete, onCancel }) {
   };
 
   const analyzePrompt = async () => {
+    setCreateError(null);
     setIsAnalyzing(true);
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    
-    // Mock plan response
-    setPlan({
-      feasible: true,
-      name: 'Trello Done Notifier',
-      description: 'Notifies Slack when Trello cards move to Done',
-      triggerType: 'webhook',
-      services: ['Trello', 'Slack'],
-      endpoints: [
-        {
-          method: 'POST',
-          path: '/webhook/trigger',
-          params: ['board_id', 'card_id', 'slack_channel'],
-        },
-      ],
-      zapierActions: [
-        { service: 'Trello', action: 'Watch Card Moved to List' },
-        { service: 'Slack', action: 'Send Channel Message' },
-      ],
-      estimatedCost: '$0.05 per execution',
-    });
-    
-    setFormData(prev => ({
-      ...prev,
-      name: 'Trello Done Notifier',
-      triggerType: 'webhook',
-      sourceService: 'Trello',
-      targetService: 'Slack',
-    }));
-    
-    setIsAnalyzing(false);
-    setCurrentStep(1);
+    try {
+      const agent = await agentService.createAgent({
+        prompt: formData.prompt.trim(),
+        name: formData.name?.trim() || undefined,
+      });
+      setPlan(agent);
+      setFormData(prev => ({
+        ...prev,
+        name: agent.name || prev.name,
+        sourceService: agent.services?.[0],
+        targetService: agent.services?.[1],
+      }));
+      setCurrentStep(1);
+    } catch (err) {
+      setCreateError(err?.message || err?.data?.detail || 'Failed to create agent. Is the backend running on port 8000?');
+    } finally {
+      setIsAnalyzing(false);
+    }
   };
 
   const handleNext = () => {
@@ -88,19 +77,9 @@ export function CreateAgentWizard({ onComplete, onCancel }) {
   };
 
   const handleDeploy = async () => {
-    setIsAnalyzing(true);
-    // Simulate deployment
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    setIsAnalyzing(false);
-    
-    onComplete?.({
-      ...formData,
-      ...plan,
-      id: `agent_${Date.now()}`,
-      status: 'running',
-      apiUrl: 'https://fuseai.app/api/agent/abc123',
-      apiKey: 'sk_live_xxxxxxxxxxxxxxxxxxxxx',
-    });
+    if (plan) {
+      onComplete?.({ ...formData, ...plan });
+    }
   };
 
   const triggerOptions = [
@@ -149,6 +128,11 @@ export function CreateAgentWizard({ onComplete, onCancel }) {
               className="wizard__textarea"
             />
 
+            {createError && (
+              <div className="wizard__error" role="alert">
+                {createError}
+              </div>
+            )}
             <div className="wizard__examples">
               <h4>Example prompts:</h4>
               <ul>
@@ -200,32 +184,28 @@ export function CreateAgentWizard({ onComplete, onCancel }) {
               <Card className="wizard__plan-card">
                 <CardBody>
                   <h4>API Endpoints</h4>
-                  {plan.endpoints.map((endpoint, idx) => (
+                  {(plan.endpoints || []).map((endpoint, idx) => (
                     <div key={idx} className="plan-endpoint">
-                      <span className="plan-endpoint__method">{endpoint.method}</span>
-                      <code className="plan-endpoint__path">{endpoint.path}</code>
+                      <span className="plan-endpoint__method">{endpoint.method || 'POST'}</span>
+                      <code className="plan-endpoint__path">{endpoint.path || '/execute'}</code>
+                      {endpoint.summary && (
+                        <span className="plan-endpoint__summary">{endpoint.summary}</span>
+                      )}
                     </div>
                   ))}
                 </CardBody>
               </Card>
 
-              <Card className="wizard__plan-card">
-                <CardBody>
-                  <h4>Zapier Actions</h4>
-                  <ul className="plan-actions">
-                    {plan.zapierActions.map((action, idx) => (
-                      <li key={idx}>
-                        <strong>{action.service}:</strong> {action.action}
-                      </li>
-                    ))}
-                  </ul>
-                </CardBody>
-              </Card>
+              {plan.apiUrl && (
+                <div className="plan-base-url">
+                  <span>Base URL:</span>
+                  <code>{plan.apiUrl}</code>
+                </div>
+              )}
 
-              <div className="plan-cost">
-                <span>Estimated Cost:</span>
-                <strong>{plan.estimatedCost}</strong>
-              </div>
+              {plan.status === 'deploying' && (
+                <p className="wizard__deploying">Agent is deploying in the background. Add to dashboard to see it.</p>
+              )}
             </div>
           </div>
         )}

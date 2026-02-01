@@ -245,6 +245,36 @@
   color: var(--color-text-primary);
 }
 
+.plan-base-url {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-sm) 0;
+  font-size: 0.875rem;
+}
+
+.plan-base-url code {
+  background: var(--color-bg-tertiary);
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border-radius: var(--radius-sm);
+}
+
+.wizard__error {
+  padding: var(--spacing-md);
+  margin: var(--spacing-md) 0;
+  background: rgba(220, 53, 69, 0.1);
+  border: 1px solid rgba(220, 53, 69, 0.3);
+  border-radius: var(--radius-md);
+  color: var(--color-danger, #dc3545);
+  font-size: 0.875rem;
+}
+
+.wizard__deploying {
+  padding: var(--spacing-sm) 0;
+  font-size: 0.875rem;
+  color: var(--color-text-muted);
+}
+
 /* Form */
 .wizard__form {
   display: flex;

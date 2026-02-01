@@ -91,10 +91,11 @@ export const agentService = {
   },
 
   /**
-   * Test agent endpoint
+   * Test / run agent endpoint (proxy through backend to deployed agent)
+   * payload: { method, path, query?, body? }
    */
-  async testEndpoint(agentId, endpoint, payload) {
-    return api.post(`/agents/${agentId}/test`, { endpoint, payload });
+  async testEndpoint(agentId, payload) {
+    return api.post(`/agents/${agentId}/test`, payload);
   },
 
   /**

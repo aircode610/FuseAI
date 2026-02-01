@@ -102,13 +102,26 @@ cp .env.example .env
 
 ### Usage
 
-```bash
-# Start the generator
-python main.py
+**Backend API (create/list/deploy agents):**
 
-# Access the dashboard
-open http://localhost:8000
+```bash
+# From project root
+python -m api.server
+# Or: uvicorn api.server:app --host 0.0.0.0 --port 8000
+# API: http://localhost:8000  (CORS allowed for http://localhost:5173)
 ```
+
+**Frontend (React/Vite):**
+
+```bash
+cd frontend
+npm install
+npm run dev
+# UI: http://localhost:5173
+# Set VITE_API_URL=http://localhost:8000/api (default) so the UI talks to the backend.
+```
+
+**Full flow:** Start the backend (port 8000), then the frontend (port 5173). Create an agent from the UI (prompt → create & deploy). The backend runs the design agent, generates code, saves to `runtime/agents_registry.json` and `runtime/deployed_agents/<id>/`, and starts the agent server on a free port (8001, 8002, …). Open an agent’s detail page to see custom endpoints and use “Try It Out” to run the agent via the backend proxy.
 
 ### Testing the planner (LangSmith)
 

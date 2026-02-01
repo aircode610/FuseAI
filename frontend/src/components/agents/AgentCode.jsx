@@ -1,21 +1,27 @@
 /**
  * AgentCode Component
- * Code tab for agent detail page
+ * Code tab: shows generated main.py from API when available, else placeholder.
  */
 
-import { useState } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Download, Copy, ChevronDown, ChevronRight, FileCode, FileJson, FileText } from 'lucide-react';
 import { Card, CardHeader, CardBody, Button } from '../common';
+import agentService from '../../services/agentService';
 import './AgentCode.css';
 
 export function AgentCode({ agent }) {
   const [activeFile, setActiveFile] = useState('main.py');
   const [expandedFolders, setExpandedFolders] = useState({ root: true });
+  const [fetchedCode, setFetchedCode] = useState(null);
 
-  const files = {
-    'main.py': {
-      icon: FileCode,
-      content: `from fastapi import FastAPI, HTTPException, Header
+  useEffect(() => {
+    if (!agent?.id) return;
+    agentService.getAgentCode(agent.id)
+      .then((res) => setFetchedCode(res?.code ?? null))
+      .catch(() => setFetchedCode(null));
+  }, [agent?.id]);
+
+  const placeholderMain = `from fastapi import FastAPI, HTTPException, Header
 from typing import Optional
 import os
 
@@ -77,7 +83,12 @@ async def process_zapier_action(data: dict) -> dict:
             timeout=30.0
         )
         return response.json()
-`
+`;
+
+  const files = useMemo(() => ({
+    'main.py': {
+      icon: FileCode,
+      content: fetchedCode ?? placeholderMain,
     },
     'config.json': {
       icon: FileJson,
@@ -110,7 +121,7 @@ pydantic==2.5.3
     },
     'README.md': {
       icon: FileText,
-      content: `# ${agent?.name || 'FuseAI Agent'}
+      content: `# ${agent?.name ?? 'FuseAI Agent'}
 
 ${agent?.description || 'Auto-generated agent by FuseAI'}
 
@@ -151,7 +162,7 @@ Triggers the agent workflow.
 \`\`\`
 `
     }
-  };
+  }), [fetchedCode, agent]);
 
   const copyToClipboard = (text) => {
     navigator.clipboard.writeText(text);
