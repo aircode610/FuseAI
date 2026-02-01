@@ -1,0 +1,36 @@
+/* Dashboard Page Styles */
+
+.dashboard__filters {
+  display: flex;
+  gap: var(--spacing-md);
+  margin-bottom: var(--spacing-xl);
+}
+
+.dashboard__search {
+  flex: 1;
+  max-width: 400px;
+}
+
+.dashboard__filter {
+  min-width: 160px;
+}
+
+.dashboard__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  gap: var(--spacing-lg);
+}
+
+@media (max-width: 640px) {
+  .dashboard__filters {
+    flex-direction: column;
+  }
+
+  .dashboard__search {
+    max-width: 100%;
+  }
+
+  .dashboard__grid {
+    grid-template-columns: 1fr;
+  }
+}
