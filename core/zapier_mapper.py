@@ -23,6 +23,7 @@ def get_planner_context(user_prompt: str) -> dict[str, Any]:
     workflow_steps = list(state.get("workflow_steps") or [])
     task_description = (state.get("task_description") or "").strip()
     parameters = list(state.get("parameters") or [])
+    suggested_agent_name = (state.get("suggested_agent_name") or "").strip()
     api_design = run_api_designer(state)
     design_task = (api_design.task_description or "").strip()
     if design_task and len(design_task) >= len(task_description):
@@ -53,6 +54,7 @@ def get_planner_context(user_prompt: str) -> dict[str, Any]:
         "api_design": design_dict,
         "valid": valid,
         "validation_reason": validation.get("reason") if not valid else None,
+        "suggested_agent_name": suggested_agent_name or None,
     }
 
 
@@ -170,4 +172,5 @@ def save_tools_to_context(context: dict[str, Any], selected_tools_serialized: li
         "services": context.get("services", []),
         "parameters": context.get("parameters", []),
         "selected_zapier_tools": selected_tools_serialized,
+        "suggested_agent_name": context.get("suggested_agent_name") or "",
     }

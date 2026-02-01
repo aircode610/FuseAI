@@ -14,6 +14,7 @@ from core.models import (
     ParameterSpec,
     PlannerState,
     ServicesOutput,
+    SuggestedAgentNameOutput,
     ValidateOutput,
     WorkflowStepItem,
     WorkflowStepsOutput,
@@ -22,6 +23,7 @@ from core.prompts import (
     format_extract_parameters,
     format_extract_services,
     format_extract_workflow_steps,
+    format_suggest_agent_name,
     format_suggest_endpoint,
     format_validate_task,
 )
@@ -189,6 +191,23 @@ def format_task_description(state: PlannerState) -> dict[str, Any]:
     return {"task_description": "\n".join(parts)}
 
 
+def suggest_agent_name(state: PlannerState) -> dict[str, Any]:
+    task_description = (state.get("task_description") or "").strip()
+    if not task_description:
+        return {"suggested_agent_name": "Generated Agent"}
+    system, user = format_suggest_agent_name(task_description)
+    try:
+        out = _invoke_structured(system, user, SuggestedAgentNameOutput)
+        name = (out.suggested_agent_name or "").strip() or "Generated Agent"
+        return {"suggested_agent_name": name[:80]}
+    except Exception as e:
+        first = task_description.split("\n")[0].strip()
+        if first.lower().startswith("task:"):
+            first = first[5:].strip()
+        fallback = (first[:80] if first else "Generated Agent") or "Generated Agent"
+        return {"suggested_agent_name": fallback}
+
+
 def build_planner_graph() -> StateGraph:
     builder: StateGraph = StateGraph(PlannerState)
     builder.add_node("validate_task", validate_task)
@@ -197,13 +216,15 @@ def build_planner_graph() -> StateGraph:
     builder.add_node("extract_parameters", extract_parameters)
     builder.add_node("suggest_endpoint", suggest_endpoint)
     builder.add_node("format_task_description", format_task_description)
+    builder.add_node("suggest_agent_name", suggest_agent_name)
     builder.add_edge(START, "validate_task")
     builder.add_edge("validate_task", "extract_services")
     builder.add_edge("extract_services", "extract_workflow_steps")
     builder.add_edge("extract_workflow_steps", "extract_parameters")
     builder.add_edge("extract_parameters", "suggest_endpoint")
     builder.add_edge("suggest_endpoint", "format_task_description")
-    builder.add_edge("format_task_description", END)
+    builder.add_edge("format_task_description", "suggest_agent_name")
+    builder.add_edge("suggest_agent_name", END)
     return builder
 
 

@@ -22,7 +22,6 @@ export function AgentCard({
     name,
     description,
     status,
-    triggerType,
     services,
     metrics,
   } = agent;
@@ -31,15 +30,6 @@ export function AgentCard({
     e.preventDefault();
     e.stopPropagation();
     action(id);
-  };
-
-  const getTriggerLabel = (type) => {
-    const labels = {
-      webhook: 'Webhook',
-      scheduled: 'Scheduled',
-      on_demand: 'On-Demand',
-    };
-    return labels[type] || type;
   };
 
   return (
@@ -52,7 +42,7 @@ export function AgentCard({
               <StatusBadge status={status} />
             </div>
             <p className="agent-card__description">
-              {getTriggerLabel(triggerType)} • {services?.join(' → ')}
+              API • {services?.length ? services.join(' → ') : 'On-demand'}
             </p>
           </div>
 

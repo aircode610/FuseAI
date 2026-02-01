@@ -149,7 +149,7 @@ export function AgentDetail() {
             <StatusBadge status={agent.status} />
           </div>
           <p className="agent-detail__description">
-            {agent.triggerType} • {agent.services?.join(' → ')}
+            API • {agent.services?.length ? agent.services.join(' → ') : 'On-demand'}
           </p>
         </div>
         <div className="agent-detail__header-actions">

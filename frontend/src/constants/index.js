@@ -10,9 +10,7 @@ export const STATUS = {
 };
 
 export const TRIGGER_TYPES = {
-  WEBHOOK: 'webhook',
-  SCHEDULED: 'scheduled',
-  MANUAL: 'manual',
+  API: 'on_demand',
 };
 
 export const STATUS_OPTIONS = [

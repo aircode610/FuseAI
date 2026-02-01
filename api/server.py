@@ -56,6 +56,10 @@ class CreateAgentRequest(BaseModel):
     name: str | None = Field(None, description="Optional display name (default from plan)")
 
 
+class AnalyzeAgentRequest(BaseModel):
+    prompt: str = Field(..., min_length=1, description="Workflow task description")
+
+
 class DeployAgentRequest(BaseModel):
     port: int | None = Field(None, description="Port (default: next available)")
 
@@ -95,7 +99,7 @@ def _agent_payload(agent: dict[str, Any]) -> dict[str, Any]:
         "description": agent.get("description"),
         "prompt": agent.get("prompt"),
         "status": agent.get("status", "created"),
-        "triggerType": agent.get("triggerType", "webhook"),
+        "triggerType": "on_demand",
         "services": agent.get("services", []),
         "endpoints": agent.get("endpoints", []),
         "task_description": agent.get("task_description"),
@@ -115,7 +119,49 @@ def _ensure_process_status() -> None:
             _agent_processes.pop(agent_id, None)
 
 
+def _suggest_name_from_task(task_description: str) -> str:
+    """Derive a short display name from task description first line."""
+    if not task_description or not task_description.strip():
+        return "Generated Agent"
+    first = task_description.strip().split("\n")[0].strip()
+    if first.lower().startswith("task:"):
+        first = first[5:].strip()
+    return (first[:80] if first else "Generated Agent") or "Generated Agent"
+
+
 # --- Routes ---
+@app.post("/api/agents/analyze")
+def api_analyze_agent(body: AnalyzeAgentRequest) -> dict[str, Any]:
+    """Analyze prompt only (planner + API designer). Returns LLM-suggested name, services, endpoints. No code gen or deploy."""
+    try:
+        from core.zapier_mapper import get_planner_context
+        ctx = get_planner_context(body.prompt)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    api_design = ctx.get("api_design") or {}
+    task_description = (ctx.get("task_description") or "").strip()
+    suggested_name = (ctx.get("suggested_agent_name") or "").strip() or _suggest_name_from_task(task_description)
+    return {
+        "suggestedName": suggested_name,
+        "services": list(ctx.get("services") or []),
+        "endpoints": list(api_design.get("endpoints") or []),
+        "task_description": task_description,
+    }
+
+
+@app.get("/api/env-schema")
+def api_env_schema() -> list[dict[str, str]]:
+    """Return env variable names and descriptions for the Settings UI (no values)."""
+    return [
+        {"name": "ANTHROPIC_API_KEY", "description": "Required for planner and code generator. Get from console.anthropic.com."},
+        {"name": "ZAPIER_MCP_SERVER_URL", "description": "Zapier MCP server URL. Get from mcp.zapier.com."},
+        {"name": "ZAPIER_MCP_SECRET", "description": "Zapier MCP secret. Get from mcp.zapier.com."},
+        {"name": "LANGSMITH_API_KEY", "description": "Optional. For LangSmith tracing."},
+        {"name": "LANGCHAIN_TRACING_V2", "description": "Optional. Set to true to enable tracing."},
+        {"name": "LANGCHAIN_PROJECT", "description": "Optional. LangSmith project name."},
+    ]
+
+
 @app.get("/api/agents")
 def api_list_agents() -> list[dict[str, Any]]:
     _ensure_process_status()
@@ -159,8 +205,10 @@ def api_create_agent(body: CreateAgentRequest) -> dict[str, Any]:
     services = list(context.get("services") or [])
     task_description = (context.get("task_description") or "").strip()
 
-    # Name from first endpoint summary or task first line
-    name = body.name
+    # Name: user-provided, or LLM-suggested from planner context, or fallback from task
+    name = (body.name or "").strip()
+    if not name:
+        name = (context.get("suggested_agent_name") or "").strip()
     if not name and task_description:
         name = task_description.split("\n")[0].strip()
         if name.lower().startswith("task:"):
@@ -176,7 +224,7 @@ def api_create_agent(body: CreateAgentRequest) -> dict[str, Any]:
         "description": task_description[:200] if task_description else "",
         "prompt": body.prompt,
         "status": "created",
-        "triggerType": "webhook",
+        "triggerType": "on_demand",
         "services": services,
         "endpoints": endpoints,
         "task_description": task_description,

@@ -13,8 +13,12 @@ function buildDefaultBody(bodyParams) {
   const obj = {};
   (bodyParams || []).forEach((p) => {
     const name = p.name || 'param';
-    if (p.type === 'int' || p.type === 'integer') obj[name] = 0;
-    else if (p.type === 'bool' || p.type === 'boolean') obj[name] = false;
+    const desc = (p.description || '').toLowerCase();
+    if (p.type === 'int' || p.type === 'integer') {
+      // Default "n" or "number of X" params to 5 for easier testing
+      if (name === 'n' || desc.includes('number of') || desc.includes('how many')) obj[name] = 5;
+      else obj[name] = 0;
+    } else if (p.type === 'bool' || p.type === 'boolean') obj[name] = false;
     else if (p.type === 'list[str]' || p.type === 'list') obj[name] = [];
     else obj[name] = '';
   });
@@ -154,44 +158,65 @@ export function AgentAPI({ agent }) {
               <div className="endpoint-header">
                 <span className="endpoint-method">{(ep.method || 'POST').toUpperCase()}</span>
                 <code className="endpoint-path">{ep.path || '/execute'}</code>
+                {ep.operation_id && (
+                  <span className="endpoint-operation-id">operation_id: {ep.operation_id}</span>
+                )}
               </div>
             </CardHeader>
             <CardBody>
               {ep.summary && (
                 <p className="endpoint-description">{ep.summary}</p>
               )}
+              {ep.response_description && (
+                <p className="endpoint-response-desc"><strong>Response:</strong> {ep.response_description}</p>
+              )}
 
-              {(ep.path_parameters?.length > 0 || ep.query_parameters?.length > 0 || ep.body_parameters?.length > 0) && (
-                <>
-                  <h4 className="api-section-title">Parameters</h4>
-                  <div className="api-body-schema">
+              <h4 className="api-section-title">Parameters (all fields from API)</h4>
+              <div className="api-params-table-wrap">
+                <table className="api-params-table">
+                  <thead>
+                    <tr>
+                      <th>Name</th>
+                      <th>Type</th>
+                      <th>Location</th>
+                      <th>Required</th>
+                      <th>Description</th>
+                    </tr>
+                  </thead>
+                  <tbody>
                     {(ep.path_parameters || []).map((p) => (
-                      <div key={p.name} className="api-param">
-                        <code>{p.name}</code>
-                        <span className="api-param__type">{p.type || 'str'}</span>
-                        <span className="api-param__location">path</span>
-                        {p.required && <span className="api-param__required">required</span>}
-                      </div>
+                      <tr key={`path-${p.name}`}>
+                        <td><code>{p.name}</code></td>
+                        <td>{p.type || 'str'}</td>
+                        <td>path</td>
+                        <td>{p.required !== false ? 'Yes' : 'No'}</td>
+                        <td>{p.description || '—'}</td>
+                      </tr>
                     ))}
                     {(ep.query_parameters || []).map((p) => (
-                      <div key={p.name} className="api-param">
-                        <code>{p.name}</code>
-                        <span className="api-param__type">{p.type || 'str'}</span>
-                        <span className="api-param__location">query</span>
-                        {p.required && <span className="api-param__required">required</span>}
-                      </div>
+                      <tr key={`query-${p.name}`}>
+                        <td><code>{p.name}</code></td>
+                        <td>{p.type || 'str'}</td>
+                        <td>query</td>
+                        <td>{p.required !== false ? 'Yes' : 'No'}</td>
+                        <td>{p.description || '—'}</td>
+                      </tr>
                     ))}
                     {(ep.body_parameters || []).map((p) => (
-                      <div key={p.name} className="api-param">
-                        <code>{p.name}</code>
-                        <span className="api-param__type">{p.type || 'str'}</span>
-                        <span className="api-param__location">body</span>
-                        {p.required && <span className="api-param__required">required</span>}
-                      </div>
+                      <tr key={`body-${p.name}`}>
+                        <td><code>{p.name}</code></td>
+                        <td>{p.type || 'str'}</td>
+                        <td>body</td>
+                        <td>{p.required !== false ? 'Yes' : 'No'}</td>
+                        <td>{p.description || '—'}</td>
+                      </tr>
                     ))}
-                  </div>
-                </>
-              )}
+                    {(!ep.path_parameters?.length && !ep.query_parameters?.length && !ep.body_parameters?.length) && (
+                      <tr><td colSpan={5} className="api-params-empty">No parameters</td></tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </CardBody>
           </Card>
         ))

@@ -1,21 +1,29 @@
-import { useState } from 'react';
-import { User, Key, Bell, Palette, Shield, Save } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { User, Key, Bell, Palette, Shield, Save, FileCode } from 'lucide-react';
 import { Card, CardHeader, CardBody, Input, Button, Select } from '../components/common';
 import { THEME } from '../constants';
 import { getThemeFromStorage, setThemeInStorage } from '../utils';
+import agentService from '../services/agentService';
 import './Settings.css';
 
 export function Settings() {
   const savedTheme = getThemeFromStorage();
-  
+  const [envSchema, setEnvSchema] = useState([]);
+
   const [formData, setFormData] = useState({
     name: 'John Doe',
     email: 'john@example.com',
     zapierApiKey: '',
     notificationsEnabled: true,
     emailNotifications: true,
-    theme: savedTheme, // Use saved theme directly
+    theme: savedTheme,
   });
+
+  useEffect(() => {
+    agentService.getEnvSchema()
+      .then((list) => setEnvSchema(Array.isArray(list) ? list : []))
+      .catch(() => setEnvSchema([]));
+  }, []);
 
   const [saved, setSaved] = useState(false);
 
@@ -73,14 +81,42 @@ export function Settings() {
           </CardBody>
         </Card>
 
-        {/* API Keys */}
+        {/* Environment variables (.env) */}
         <Card className="settings__card slide-in-right" style={{ animationDelay: '0.2s' }}>
+          <CardHeader>
+            <div className="settings__header">
+              <div className="settings__icon settings__icon--secondary">
+                <FileCode size={20} />
+              </div>
+              <h3>Environment Variables</h3>
+            </div>
+          </CardHeader>
+          <CardBody>
+            <p className="settings__hint settings__hint--block">
+              Set these in a <code>.env</code> file in the project root. Values are not shown here for security.
+            </p>
+            <div className="settings__env-list">
+              {envSchema.map((v) => (
+                <div key={v.name} className="settings__env-item">
+                  <code className="settings__env-name">{v.name}</code>
+                  <p className="settings__env-desc">{v.description}</p>
+                </div>
+              ))}
+            </div>
+            {envSchema.length === 0 && (
+              <p className="settings__hint">Start the backend to load the list, or add ANTHROPIC_API_KEY, ZAPIER_MCP_SERVER_URL, ZAPIER_MCP_SECRET to .env.</p>
+            )}
+          </CardBody>
+        </Card>
+
+        {/* API Keys (legacy / optional) */}
+        <Card className="settings__card slide-in-right" style={{ animationDelay: '0.25s' }}>
           <CardHeader>
             <div className="settings__header">
               <div className="settings__icon settings__icon--secondary">
                 <Key size={20} />
               </div>
-              <h3>API Keys</h3>
+              <h3>API Keys (optional)</h3>
             </div>
           </CardHeader>
           <CardBody>
@@ -135,7 +171,7 @@ export function Settings() {
         </Card>
 
         {/* Appearance */}
-        <Card className="settings__card slide-in-right" style={{ animationDelay: '0.4s' }}>
+        <Card className="settings__card slide-in-right" style={{ animationDelay: '0.35s' }}>
           <CardHeader>
             <div className="settings__header">
               <div className="settings__icon settings__icon--gradient">

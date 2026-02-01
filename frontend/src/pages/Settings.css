@@ -127,6 +127,42 @@
   font-style: italic;
 }
 
+.settings__hint--block {
+  display: block;
+  margin-bottom: var(--spacing-md);
+}
+
+.settings__env-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.settings__env-item {
+  padding: var(--spacing-sm) 0;
+  border-bottom: 1px solid var(--color-border-light);
+}
+
+.settings__env-item:last-child {
+  border-bottom: none;
+}
+
+.settings__env-name {
+  display: inline-block;
+  font-size: 0.875rem;
+  font-family: var(--font-mono);
+  background: var(--color-bg-tertiary);
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border-radius: var(--radius-sm);
+  margin-bottom: var(--spacing-xs);
+}
+
+.settings__env-desc {
+  font-size: 0.8125rem;
+  color: var(--color-text-secondary);
+  margin: 0;
+}
+
 /* Save Button */
 .settings__actions {
   display: flex;

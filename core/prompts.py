@@ -89,6 +89,22 @@ Services: {services}
 Suggest one or more REST endpoints. For each: method, path_slug, and a one-line summary.
 """
 
+# --- Planner: suggest agent name (2–5 words) ---
+SUGGEST_AGENT_NAME_SYSTEM = """You suggest a short display name for an API agent based on its workflow task. The name should be 2 to 5 words, in title case, descriptive of what the agent does (e.g. "Trello Done Notifier", "Slack Card Summarizer", "Gmail Calendar Scheduler"). No quotes or punctuation. Just the name."""
+
+SUGGEST_AGENT_NAME_USER = """Workflow task:
+{task_description}
+
+Suggest a short display name for this agent (2 to 5 words, title case)."""
+
+
+def format_suggest_agent_name(task_description: str) -> tuple[str, str]:
+    return (
+        SUGGEST_AGENT_NAME_SYSTEM,
+        SUGGEST_AGENT_NAME_USER.format(task_description=task_description or "Execute workflow"),
+    )
+
+
 # --- Code generator ---
 CODE_GEN_SYSTEM = """You are a code generator. Generate the complete FastAPI agent Python file (main.py) that:
 1. Defines create_app(tools: list) -> FastAPI. The tools are LangChain tools passed in by the runner; do NOT call get_zapier_tools or load tools inside the agent.

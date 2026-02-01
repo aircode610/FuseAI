@@ -9,7 +9,7 @@ export const mockAgents = [
     name: 'Trello Done Notifier',
     description: 'Notifies Slack when Trello cards move to Done',
     status: 'running',
-    triggerType: 'webhook',
+    triggerType: 'on_demand',
     services: ['Trello', 'Slack'],
     metrics: {
       totalRequests: 47,
@@ -24,7 +24,7 @@ export const mockAgents = [
     name: 'Daily Asana Digest',
     description: 'Sends daily task summaries to Slack',
     status: 'running',
-    triggerType: 'scheduled',
+    triggerType: 'on_demand',
     services: ['Asana', 'Slack'],
     schedule: '0 9 * * *',
     metrics: {
@@ -40,7 +40,7 @@ export const mockAgents = [
     name: 'GitHub Issue Tracker',
     description: 'Creates Discord notifications for GitHub issues',
     status: 'error',
-    triggerType: 'webhook',
+    triggerType: 'on_demand',
     services: ['GitHub', 'Discord'],
     metrics: {
       totalRequests: 15,
