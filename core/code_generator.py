@@ -64,4 +64,73 @@ def generate_agent(
     services = list(context_for_coding_agent.get("services") or [])
     manifest = {"tool_names": tool_names, "services": services}
     (out_dir / "tools_manifest.json").write_text(json.dumps(manifest, indent=2), encoding="utf-8")
+
+    # Per-agent config.json, README.md, requirements.txt for Code tab
+    agent_name = (context_for_coding_agent.get("suggested_agent_name") or "").strip() or "Generated Agent"
+    task_description = (context_for_coding_agent.get("task_description") or "").strip()
+    api_design = context_for_coding_agent.get("api_design") or {}
+    endpoints = api_design.get("endpoints") or []
+
+    config = {
+        "agent_id": agent_id,
+        "name": agent_name,
+        "trigger_type": "on_demand",
+        "zapier": {
+            "services": services,
+            "tool_names": tool_names,
+        },
+        "monitoring": {
+            "log_level": "INFO",
+            "enable_metrics": True,
+        },
+    }
+    (out_dir / "config.json").write_text(json.dumps(config, indent=2), encoding="utf-8")
+
+    readme_lines = [
+        f"# {agent_name}",
+        "",
+        task_description[:500] if task_description else "Auto-generated agent by FuseAI.",
+        "",
+        "## Setup",
+        "",
+        "1. Install dependencies:",
+        "```bash",
+        "pip install -r requirements.txt",
+        "```",
+        "",
+        "2. Set environment variables (e.g. in .env):",
+        "```bash",
+        "export ANTHROPIC_API_KEY=your_key",
+        "export ZAPIER_MCP_SERVER_URL=...",
+        "export ZAPIER_MCP_SECRET=...",
+        "```",
+        "",
+        "3. Run the server:",
+        "```bash",
+        "uvicorn main:app --host 0.0.0.0 --port 8000",
+        "```",
+        "",
+        "## API Endpoints",
+        "",
+    ]
+    for ep in endpoints:
+        method = (ep.get("method") or "POST").upper()
+        path = ep.get("path") or "/execute"
+        summary = (ep.get("summary") or "").strip()
+        readme_lines.append(f"### {method} {path}")
+        if summary:
+            readme_lines.append(f"\n{summary}\n")
+    (out_dir / "README.md").write_text("\n".join(readme_lines), encoding="utf-8")
+
+    requirements = """fastapi>=0.109.0
+uvicorn>=0.27.0
+httpx>=0.26.0
+python-dotenv>=1.0.0
+pydantic>=2.5.0
+langchain-anthropic>=0.2.0
+langchain-core>=0.3.0
+langgraph>=0.2.0
+"""
+    (out_dir / "requirements.txt").write_text(requirements, encoding="utf-8")
+
     return main_py

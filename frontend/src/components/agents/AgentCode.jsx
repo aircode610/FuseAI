@@ -13,12 +13,19 @@ export function AgentCode({ agent }) {
   const [activeFile, setActiveFile] = useState('main.py');
   const [expandedFolders, setExpandedFolders] = useState({ root: true });
   const [fetchedCode, setFetchedCode] = useState(null);
+  const [fetchedFiles, setFetchedFiles] = useState(null);
 
   useEffect(() => {
     if (!agent?.id) return;
     agentService.getAgentCode(agent.id)
-      .then((res) => setFetchedCode(res?.code ?? null))
-      .catch(() => setFetchedCode(null));
+      .then((res) => {
+        setFetchedCode(res?.code ?? null);
+        setFetchedFiles(res?.files ?? null);
+      })
+      .catch(() => {
+        setFetchedCode(null);
+        setFetchedFiles(null);
+      });
   }, [agent?.id]);
 
   const placeholderMain = `from fastapi import FastAPI, HTTPException, Header
@@ -84,84 +91,38 @@ async def process_zapier_action(data: dict) -> dict:
         return response.json()
 `;
 
-  const files = useMemo(() => ({
-    'main.py': {
-      icon: FileCode,
-      content: fetchedCode ?? placeholderMain,
-    },
-    'config.json': {
-      icon: FileJson,
-      content: JSON.stringify({
-        agent_id: agent?.id || 'agent_001',
-        name: agent?.name || 'FuseAI Agent',
-        trigger_type: 'on_demand',
-        zapier: {
-          api_key: '${ZAPIER_API_KEY}',
-          actions: [
-            { service: 'Trello', action: 'watch_card_moved' },
-            { service: 'Slack', action: 'send_message' }
-          ]
-        },
-        monitoring: {
-          log_level: 'INFO',
-          enable_metrics: true,
-          web_search_on_errors: true
-        }
-      }, null, 2)
-    },
-    'requirements.txt': {
-      icon: FileText,
-      content: `fastapi==0.109.0
-uvicorn==0.27.0
-httpx==0.26.0
-python-dotenv==1.0.0
-pydantic==2.5.3
-`
-    },
-    'README.md': {
-      icon: FileText,
-      content: `# ${agent?.name ?? 'FuseAI Agent'}
+  const files = useMemo(() => {
+    const mainContent = fetchedCode ?? (fetchedFiles?.['main.py']) ?? placeholderMain;
+    const configContent = fetchedFiles?.['config.json'] ?? JSON.stringify({
+      agent_id: agent?.id || 'agent_001',
+      name: agent?.name || 'FuseAI Agent',
+      trigger_type: 'on_demand',
+      zapier: { services: agent?.services || [], tool_names: [] },
+      monitoring: { log_level: 'INFO', enable_metrics: true }
+    }, null, 2);
+    const requirementsContent = fetchedFiles?.['requirements.txt'] ?? `fastapi>=0.109.0
+uvicorn>=0.27.0
+httpx>=0.26.0
+python-dotenv>=1.0.0
+pydantic>=2.5.0
+`;
+    const readmeContent = fetchedFiles?.['README.md'] ?? `# ${agent?.name ?? 'FuseAI Agent'}
 
 ${agent?.description || 'Auto-generated agent by FuseAI'}
 
 ## Setup
 
-1. Install dependencies:
-   \`\`\`bash
-   pip install -r requirements.txt
-   \`\`\`
-
-2. Set environment variables:
-   \`\`\`bash
-   export API_KEY=your_api_key
-   export API_KEY=your_api_key
-   \`\`\`
-
-3. Run the server:
-   \`\`\`bash
-   uvicorn main:app --host 0.0.0.0 --port 8000
-   \`\`\`
-
-## API Endpoints
-
-### POST /execute
-
-On-demand API endpoint.
-
-**Headers:**
-- \`X-API-Key\`: Your API key
-
-**Body:**
-\`\`\`json
-{
-  "board_id": "string",
-  "card_id": "string",
-  "slack_channel": "string"
-}
-\`\`\`
-`
-    }
-  }), [fetchedCode, agent]);
+1. Install dependencies: \`pip install -r requirements.txt\`
+2. Set environment variables (ANTHROPIC_API_KEY, ZAPIER_MCP_*).
+3. Run: \`uvicorn main:app --host 0.0.0.0 --port 8000\`
+`;
+    return {
+      'main.py': { icon: FileCode, content: mainContent },
+      'config.json': { icon: FileJson, content: configContent },
+      'requirements.txt': { icon: FileText, content: requirementsContent },
+      'README.md': { icon: FileText, content: readmeContent },
+    };
+  }, [fetchedCode, fetchedFiles, agent]);
 
   const copyToClipboard = (text) => {
     navigator.clipboard.writeText(text);
@@ -186,7 +147,7 @@ On-demand API endpoint.
                 onClick={() => setExpandedFolders(prev => ({ ...prev, root: !prev.root }))}
               >
                 {expandedFolders.root ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-                <span>agent_{agent?.id || '001'}</span>
+                <span>{agent?.id || 'agent_001'}</span>
               </div>
               {expandedFolders.root && (
                 <div className="file-tree__files">
