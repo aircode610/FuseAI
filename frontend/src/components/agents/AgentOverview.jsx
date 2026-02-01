@@ -109,7 +109,7 @@ export function AgentOverview({ agent, metrics, recentLogs }) {
 
               <div className="config-list__item">
                 <span className="config-list__label">Trigger Type</span>
-                <span className="config-list__value">{agent?.triggerType || 'Not set'}</span>
+                <span className="config-list__value">API (on-demand)</span>
               </div>
 
               {agent?.services && (

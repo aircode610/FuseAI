@@ -1,21 +1,27 @@
 /**
  * AgentCode Component
- * Code tab for agent detail page
+ * Code tab: shows generated main.py from API when available, else placeholder.
  */
 
-import { useState } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Download, Copy, ChevronDown, ChevronRight, FileCode, FileJson, FileText } from 'lucide-react';
 import { Card, CardHeader, CardBody, Button } from '../common';
+import agentService from '../../services/agentService';
 import './AgentCode.css';
 
 export function AgentCode({ agent }) {
   const [activeFile, setActiveFile] = useState('main.py');
   const [expandedFolders, setExpandedFolders] = useState({ root: true });
+  const [fetchedCode, setFetchedCode] = useState(null);
 
-  const files = {
-    'main.py': {
-      icon: FileCode,
-      content: `from fastapi import FastAPI, HTTPException, Header
+  useEffect(() => {
+    if (!agent?.id) return;
+    agentService.getAgentCode(agent.id)
+      .then((res) => setFetchedCode(res?.code ?? null))
+      .catch(() => setFetchedCode(null));
+  }, [agent?.id]);
+
+  const placeholderMain = `from fastapi import FastAPI, HTTPException, Header
 from typing import Optional
 import os
 
@@ -23,20 +29,19 @@ app = FastAPI(title="${agent?.name || 'FuseAI Agent'}")
 
 # Configuration
 API_KEY = os.getenv("API_KEY")
-ZAPIER_WEBHOOK = os.getenv("ZAPIER_WEBHOOK")
 
 def verify_api_key(x_api_key: Optional[str] = Header(None)):
     if x_api_key != API_KEY:
         raise HTTPException(status_code=401, detail="Invalid API key")
     return x_api_key
 
-@app.post("/webhook/trigger")
-async def handle_webhook(
+@app.post("/execute")
+async def execute(
     payload: dict,
     api_key: str = Depends(verify_api_key)
 ):
     """
-    ${agent?.description || 'Webhook trigger endpoint'}
+    ${agent?.description || 'On-demand API endpoint'}
     """
     try:
         # Extract data from payload
@@ -72,19 +77,24 @@ async def process_zapier_action(data: dict) -> dict:
     """Execute Zapier action"""
     async with httpx.AsyncClient() as client:
         response = await client.post(
-            ZAPIER_WEBHOOK,
+            os.getenv("ZAPIER_WEBHOOK", ""),
             json=data,
             timeout=30.0
         )
         return response.json()
-`
+`;
+
+  const files = useMemo(() => ({
+    'main.py': {
+      icon: FileCode,
+      content: fetchedCode ?? placeholderMain,
     },
     'config.json': {
       icon: FileJson,
       content: JSON.stringify({
         agent_id: agent?.id || 'agent_001',
         name: agent?.name || 'FuseAI Agent',
-        trigger_type: agent?.triggerType || 'webhook',
+        trigger_type: 'on_demand',
         zapier: {
           api_key: '${ZAPIER_API_KEY}',
           actions: [
@@ -110,7 +120,7 @@ pydantic==2.5.3
     },
     'README.md': {
       icon: FileText,
-      content: `# ${agent?.name || 'FuseAI Agent'}
+      content: `# ${agent?.name ?? 'FuseAI Agent'}
 
 ${agent?.description || 'Auto-generated agent by FuseAI'}
 
@@ -124,7 +134,7 @@ ${agent?.description || 'Auto-generated agent by FuseAI'}
 2. Set environment variables:
    \`\`\`bash
    export API_KEY=your_api_key
-   export ZAPIER_WEBHOOK=your_zapier_webhook_url
+   export API_KEY=your_api_key
    \`\`\`
 
 3. Run the server:
@@ -134,9 +144,9 @@ ${agent?.description || 'Auto-generated agent by FuseAI'}
 
 ## API Endpoints
 
-### POST /webhook/trigger
+### POST /execute
 
-Triggers the agent workflow.
+On-demand API endpoint.
 
 **Headers:**
 - \`X-API-Key\`: Your API key
@@ -151,7 +161,7 @@ Triggers the agent workflow.
 \`\`\`
 `
     }
-  };
+  }), [fetchedCode, agent]);
 
   const copyToClipboard = (text) => {
     navigator.clipboard.writeText(text);

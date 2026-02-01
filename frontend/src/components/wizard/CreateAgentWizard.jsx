@@ -1,31 +1,30 @@
 /**
  * CreateAgentWizard Component
- * Multi-step wizard for creating new agents
+ * Step 1: Describe prompt → "Analyze" calls backend to suggest name + plan (no create).
+ * Step 2: Suggested name (editable) + plan. Step 3: Configure name → "Deploy Agent" creates + deploys.
  */
 
 import { useState } from 'react';
-import { Wand2, ArrowRight, ArrowLeft, Check, Loader, Zap, Clock, Webhook, Settings } from 'lucide-react';
-import { Button, Input, Textarea, Select, Card, CardBody } from '../common';
+import { Wand2, ArrowRight, ArrowLeft, Check, Loader, Settings } from 'lucide-react';
+import { Button, Input, Textarea, Card, CardBody } from '../common';
+import agentService from '../../services/agentService';
 import './CreateAgentWizard.css';
 
 const STEPS = [
   { id: 'prompt', title: 'Describe Your Agent', icon: Wand2 },
-  { id: 'review', title: 'Review Plan', icon: Check },
-  { id: 'configure', title: 'Configure', icon: Settings },
+  { id: 'name', title: 'Suggested Name & Plan', icon: Check },
+  { id: 'configure', title: 'Configure & Deploy', icon: Settings },
 ];
 
 export function CreateAgentWizard({ onComplete, onCancel }) {
   const [currentStep, setCurrentStep] = useState(0);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [createError, setCreateError] = useState(null);
   const [formData, setFormData] = useState({
     prompt: '',
     name: '',
-    triggerType: 'webhook',
-    zapierApiKey: '',
     sourceService: '',
     targetService: '',
-    slackChannel: '',
-    schedule: '',
     enableWebSearch: true,
     enableRetry: true,
   });
@@ -36,41 +35,23 @@ export function CreateAgentWizard({ onComplete, onCancel }) {
   };
 
   const analyzePrompt = async () => {
+    setCreateError(null);
     setIsAnalyzing(true);
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    
-    // Mock plan response
-    setPlan({
-      feasible: true,
-      name: 'Trello Done Notifier',
-      description: 'Notifies Slack when Trello cards move to Done',
-      triggerType: 'webhook',
-      services: ['Trello', 'Slack'],
-      endpoints: [
-        {
-          method: 'POST',
-          path: '/webhook/trigger',
-          params: ['board_id', 'card_id', 'slack_channel'],
-        },
-      ],
-      zapierActions: [
-        { service: 'Trello', action: 'Watch Card Moved to List' },
-        { service: 'Slack', action: 'Send Channel Message' },
-      ],
-      estimatedCost: '$0.05 per execution',
-    });
-    
-    setFormData(prev => ({
-      ...prev,
-      name: 'Trello Done Notifier',
-      triggerType: 'webhook',
-      sourceService: 'Trello',
-      targetService: 'Slack',
-    }));
-    
-    setIsAnalyzing(false);
-    setCurrentStep(1);
+    try {
+      const result = await agentService.analyzePrompt(formData.prompt.trim());
+      setPlan(result);
+      setFormData(prev => ({
+        ...prev,
+        name: result.suggestedName || prev.name,
+        sourceService: result.services?.[0],
+        targetService: result.services?.[1],
+      }));
+      setCurrentStep(1);
+    } catch (err) {
+      setCreateError(err?.message || err?.data?.detail || 'Failed to analyze. Is the backend running on port 8000?');
+    } finally {
+      setIsAnalyzing(false);
+    }
   };
 
   const handleNext = () => {
@@ -88,26 +69,20 @@ export function CreateAgentWizard({ onComplete, onCancel }) {
   };
 
   const handleDeploy = async () => {
+    setCreateError(null);
     setIsAnalyzing(true);
-    // Simulate deployment
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    setIsAnalyzing(false);
-    
-    onComplete?.({
-      ...formData,
-      ...plan,
-      id: `agent_${Date.now()}`,
-      status: 'running',
-      apiUrl: 'https://fuseai.app/api/agent/abc123',
-      apiKey: 'sk_live_xxxxxxxxxxxxxxxxxxxxx',
-    });
+    try {
+      const agent = await agentService.createAgent({
+        prompt: formData.prompt.trim(),
+        name: formData.name?.trim() || undefined,
+      });
+      onComplete?.({ ...formData, ...agent });
+    } catch (err) {
+      setCreateError(err?.message || err?.data?.detail || 'Failed to create agent.');
+    } finally {
+      setIsAnalyzing(false);
+    }
   };
-
-  const triggerOptions = [
-    { value: 'webhook', label: 'Webhook (triggered by external service)' },
-    { value: 'scheduled', label: 'Scheduled (runs on a schedule)' },
-    { value: 'on_demand', label: 'On-Demand (called manually)' },
-  ];
 
   return (
     <div className="wizard">
@@ -138,7 +113,7 @@ export function CreateAgentWizard({ onComplete, onCancel }) {
           <div className="wizard__step-content">
             <div className="wizard__header">
               <h2>Describe what you want your agent to do</h2>
-              <p>Be specific about the trigger, services, and actions you need.</p>
+              <p>Be specific about the services and actions you need.</p>
             </div>
             
             <Textarea
@@ -149,6 +124,11 @@ export function CreateAgentWizard({ onComplete, onCancel }) {
               className="wizard__textarea"
             />
 
+            {createError && (
+              <div className="wizard__error" role="alert">
+                {createError}
+              </div>
+            )}
             <div className="wizard__examples">
               <h4>Example prompts:</h4>
               <ul>
@@ -170,29 +150,22 @@ export function CreateAgentWizard({ onComplete, onCancel }) {
         {currentStep === 1 && plan && (
           <div className="wizard__step-content">
             <div className="wizard__header">
-              <h2>Review Your Agent Plan</h2>
-              <p>We've analyzed your request. Here's what we'll build:</p>
+              <h2>Suggested Name & Plan</h2>
+              <p>We've analyzed your request. Edit the name if you like, then continue to deploy.</p>
             </div>
 
             <div className="wizard__plan">
               <Card className="wizard__plan-card">
                 <CardBody>
-                  <div className="plan-section">
-                    <span className="plan-label">Agent Name</span>
-                    <span className="plan-value">{plan.name}</span>
-                  </div>
-                  <div className="plan-section">
-                    <span className="plan-label">Type</span>
-                    <div className="plan-badge">
-                      {plan.triggerType === 'webhook' && <Webhook size={14} />}
-                      {plan.triggerType === 'scheduled' && <Clock size={14} />}
-                      {plan.triggerType === 'on_demand' && <Zap size={14} />}
-                      <span>{plan.triggerType}</span>
-                    </div>
-                  </div>
+                  <Input
+                    label="Agent Name (suggested)"
+                    value={formData.name}
+                    onChange={(e) => updateFormData('name', e.target.value)}
+                    placeholder="e.g. Trello Done Notifier"
+                  />
                   <div className="plan-section">
                     <span className="plan-label">Services</span>
-                    <span className="plan-value">{plan.services.join(' → ')}</span>
+                    <span className="plan-value">{(plan.services || []).join(' → ') || '—'}</span>
                   </div>
                 </CardBody>
               </Card>
@@ -200,42 +173,27 @@ export function CreateAgentWizard({ onComplete, onCancel }) {
               <Card className="wizard__plan-card">
                 <CardBody>
                   <h4>API Endpoints</h4>
-                  {plan.endpoints.map((endpoint, idx) => (
+                  {(plan.endpoints || []).map((endpoint, idx) => (
                     <div key={idx} className="plan-endpoint">
-                      <span className="plan-endpoint__method">{endpoint.method}</span>
-                      <code className="plan-endpoint__path">{endpoint.path}</code>
+                      <span className="plan-endpoint__method">{endpoint.method || 'POST'}</span>
+                      <code className="plan-endpoint__path">{endpoint.path || '/execute'}</code>
+                      {endpoint.summary && (
+                        <span className="plan-endpoint__summary">{endpoint.summary}</span>
+                      )}
                     </div>
                   ))}
                 </CardBody>
               </Card>
-
-              <Card className="wizard__plan-card">
-                <CardBody>
-                  <h4>Zapier Actions</h4>
-                  <ul className="plan-actions">
-                    {plan.zapierActions.map((action, idx) => (
-                      <li key={idx}>
-                        <strong>{action.service}:</strong> {action.action}
-                      </li>
-                    ))}
-                  </ul>
-                </CardBody>
-              </Card>
-
-              <div className="plan-cost">
-                <span>Estimated Cost:</span>
-                <strong>{plan.estimatedCost}</strong>
-              </div>
             </div>
           </div>
         )}
 
-        {/* Step 3: Configure */}
+        {/* Step 3: Configure & Deploy */}
         {currentStep === 2 && (
           <div className="wizard__step-content">
             <div className="wizard__header">
-              <h2>Configure Your Agent</h2>
-              <p>Set up the final details before deployment.</p>
+              <h2>Configure & Deploy</h2>
+              <p>Confirm the agent name and create your API agent (on-demand only).</p>
             </div>
 
             <div className="wizard__form">
@@ -245,60 +203,9 @@ export function CreateAgentWizard({ onComplete, onCancel }) {
                 onChange={(e) => updateFormData('name', e.target.value)}
                 required
               />
-
-              <Select
-                label="Trigger Type"
-                options={triggerOptions}
-                value={formData.triggerType}
-                onChange={(e) => updateFormData('triggerType', e.target.value)}
-              />
-
-              <Input
-                label="Zapier API Key"
-                type="password"
-                value={formData.zapierApiKey}
-                onChange={(e) => updateFormData('zapierApiKey', e.target.value)}
-                hint="Find this in your Zapier account settings"
-              />
-
-              {formData.targetService === 'Slack' && (
-                <Input
-                  label="Slack Channel"
-                  value={formData.slackChannel}
-                  onChange={(e) => updateFormData('slackChannel', e.target.value)}
-                  placeholder="#channel-name"
-                />
+              {createError && (
+                <div className="wizard__error" role="alert">{createError}</div>
               )}
-
-              {formData.triggerType === 'scheduled' && (
-                <Input
-                  label="Schedule (Cron Expression)"
-                  value={formData.schedule}
-                  onChange={(e) => updateFormData('schedule', e.target.value)}
-                  placeholder="0 9 * * *"
-                  hint="e.g., '0 9 * * *' for daily at 9 AM"
-                />
-              )}
-
-              <div className="wizard__options">
-                <h4>Advanced Options</h4>
-                <label className="wizard__checkbox">
-                  <input
-                    type="checkbox"
-                    checked={formData.enableWebSearch}
-                    onChange={(e) => updateFormData('enableWebSearch', e.target.checked)}
-                  />
-                  <span>Enable web search for error solutions</span>
-                </label>
-                <label className="wizard__checkbox">
-                  <input
-                    type="checkbox"
-                    checked={formData.enableRetry}
-                    onChange={(e) => updateFormData('enableRetry', e.target.checked)}
-                  />
-                  <span>Enable automatic retry on failure (3 attempts)</span>
-                </label>
-              </div>
             </div>
           </div>
         )}
@@ -331,6 +238,7 @@ export function CreateAgentWizard({ onComplete, onCancel }) {
               icon={isAnalyzing ? Loader : Check}
               onClick={handleDeploy}
               loading={isAnalyzing}
+              disabled={!formData.name?.trim()}
             >
               Deploy Agent
             </Button>

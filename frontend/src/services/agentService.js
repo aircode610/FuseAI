@@ -28,10 +28,17 @@ export const agentService = {
   },
 
   /**
-   * Analyze a prompt and return a plan
+   * Analyze a prompt only (suggested name, services, endpoints). No create/deploy.
    */
   async analyzePrompt(prompt) {
     return api.post('/agents/analyze', { prompt });
+  },
+
+  /**
+   * Get env variable names and descriptions for Settings (no values).
+   */
+  async getEnvSchema() {
+    return api.get('/env-schema');
   },
 
   /**
@@ -91,10 +98,11 @@ export const agentService = {
   },
 
   /**
-   * Test agent endpoint
+   * Test / run agent endpoint (proxy through backend to deployed agent)
+   * payload: { method, path, query?, body? }
    */
-  async testEndpoint(agentId, endpoint, payload) {
-    return api.post(`/agents/${agentId}/test`, { endpoint, payload });
+  async testEndpoint(agentId, payload) {
+    return api.post(`/agents/${agentId}/test`, payload);
   },
 
   /**

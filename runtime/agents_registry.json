@@ -1,0 +1,138 @@
+{
+  "agents": [
+    {
+      "id": "agent_1769926150",
+      "name": "check my last n emails and summarize them",
+      "description": "Task: check my last n emails and summarize them\nWorkflow steps (execute in order):\n  1. Get the last n emails from inbox (Gmail) \u2014 Retrieves the most recent n email messages from the user's Gmail inbo",
+      "prompt": "check my last n emails and summarize them",
+      "status": "deploying",
+      "triggerType": "webhook",
+      "services": [
+        "Gmail"
+      ],
+      "endpoints": [
+        {
+          "method": "POST",
+          "path": "/summarize-recent-emails",
+          "operation_id": "summarize_recent_emails",
+          "summary": "Fetch the last n emails from Gmail and generate a summary of their content",
+          "path_parameters": [],
+          "query_parameters": [
+            {
+              "name": "n",
+              "type": "int",
+              "description": "Number of recent emails to retrieve and summarize",
+              "required": true,
+              "location": "query"
+            }
+          ],
+          "body_parameters": []
+        }
+      ],
+      "task_description": "Task: check my last n emails and summarize them\nWorkflow steps (execute in order):\n  1. Get the last n emails from inbox (Gmail) \u2014 Retrieves the most recent n email messages from the user's Gmail inbox\n  2. Extract email content and metadata from each email (Gmail) \u2014 Gets the subject, sender, date, and body content for each of the retrieved emails\n  3. Summarize the emails into a coherent overview \u2014 Creates a summary text highlighting key topics, senders, and important information from all the emails\nEndpoint 0: POST /summarize-recent-emails \u2014 Fetch the last n emails from Gmail and generate a summary of their content\nServices: Gmail\nParameters:\n- n (int, query, endpoint 0): Specifies how many of the most recent emails to fetch for summarization",
+      "port": 8001,
+      "created_at": "2026-02-01T06:09:21Z"
+    },
+    {
+      "id": "agent_1769926433",
+      "name": "When a Trello card moves to Done, post a summary to Slack",
+      "description": "Task: When a Trello card moves to Done, post a summary to Slack\nWorkflow steps (execute in order):\n  1. Set up a webhook or monitor for card movements in Trello (Trello) \u2014 Establish trigger to detect ",
+      "prompt": "When a Trello card moves to Done, post a summary to Slack",
+      "status": "deploying",
+      "triggerType": "webhook",
+      "services": [
+        "Trello",
+        "Slack"
+      ],
+      "endpoints": [
+        {
+          "method": "POST",
+          "path": "/card-done-to-slack/{card_id}",
+          "operation_id": "card_done_to_slack",
+          "summary": "Post a summary to Slack when a Trello card moves to Done status",
+          "path_parameters": [
+            {
+              "name": "card_id",
+              "type": "str",
+              "description": "ID of the Trello card that moved to Done",
+              "required": true,
+              "location": "path"
+            }
+          ],
+          "query_parameters": [],
+          "body_parameters": []
+        }
+      ],
+      "task_description": "Task: When a Trello card moves to Done, post a summary to Slack\nWorkflow steps (execute in order):\n  1. Set up a webhook or monitor for card movements in Trello (Trello) \u2014 Establish trigger to detect when any card is moved to the 'Done' list\n  2. Get the card details when moved to Done (Trello) \u2014 Fetch card information including name, description, members, due date, and other relevant details\n  3. Generate a summary of the completed card (Trello) \u2014 Create a concise summary text containing key card information for posting\n  4. Post the card summary message to Slack (Slack) \u2014 Send the formatted summary to the designated Slack channel\nEndpoint 0: POST /card-done-to-slack \u2014 Post a summary to Slack when a Trello card moves to Done status\nServices: Trello, Slack\nParameters:\n- card_id (str, path, endpoint 0): Identifies the specific card to get details for the summary\n- slack_channel (str, body, endpoint 1): Destination for posting the card summary message",
+      "port": 8002,
+      "created_at": "2026-02-01T06:14:05Z"
+    },
+    {
+      "id": "agent_1769927277",
+      "name": "Gmail Email Summarizer",
+      "description": "Task: create an agent which summarizes my last n emails\nWorkflow steps (execute in order):\n  1. Connect to Gmail account (Gmail) \u2014 Establish authentication and connection to access Gmail data\n  2. Get",
+      "prompt": "create an agent which summarizes my last n emails",
+      "status": "deploying",
+      "triggerType": "on_demand",
+      "services": [
+        "Gmail"
+      ],
+      "endpoints": [
+        {
+          "method": "POST",
+          "path": "/summarize-emails",
+          "operation_id": "summarize_emails",
+          "summary": "Fetch the last n emails from Gmail and generate an AI summary of their contents",
+          "path_parameters": [],
+          "query_parameters": [],
+          "body_parameters": [
+            {
+              "name": "n",
+              "type": "int",
+              "description": "Number of recent emails to summarize",
+              "required": true,
+              "location": "body"
+            }
+          ]
+        }
+      ],
+      "task_description": "Task: create an agent which summarizes my last n emails\nWorkflow steps (execute in order):\n  1. Connect to Gmail account (Gmail) \u2014 Establish authentication and connection to access Gmail data\n  2. Get the last n emails from inbox (Gmail) \u2014 Retrieve the specified number of most recent emails with their content, subject, sender, and date\n  3. Extract email content and metadata (Gmail) \u2014 Parse each email to get subject, sender, date, and body text for processing\n  4. Summarize the collection of emails \u2014 Generate a concise summary covering key topics, important information, and overall themes from the emails\n  5. Format and present the summary \u2014 Structure the summary in a readable format with key insights and important details highlighted\nEndpoint 0: POST /summarize-emails \u2014 Fetch the last n emails from Gmail and generate an AI summary of their contents\nServices: Gmail\nParameters:\n- n (int, body, endpoint 0): Specifies how many of the most recent emails to retrieve and summarize",
+      "port": 8003,
+      "created_at": "2026-02-01T06:28:12Z"
+    },
+    {
+      "id": "agent_1769927611",
+      "name": "Gmail Email Summarizer",
+      "description": "Task: create an agent which summarizes my last n emails\nWorkflow steps (execute in order):\n  1. Get the last n emails from inbox (Gmail) \u2014 Fetches the most recent n email messages from the user's Gmai",
+      "prompt": "create an agent which summarizes my last n emails",
+      "status": "deploying",
+      "triggerType": "on_demand",
+      "services": [
+        "Gmail"
+      ],
+      "endpoints": [
+        {
+          "method": "POST",
+          "path": "/summarize-recent-emails",
+          "operation_id": "summarize_recent_emails",
+          "summary": "Fetch the last n emails from Gmail and generate a summary of their content",
+          "path_parameters": [],
+          "query_parameters": [
+            {
+              "name": "n",
+              "type": "int",
+              "description": "Number of last emails to retrieve and summarize",
+              "required": true,
+              "location": "query"
+            }
+          ],
+          "body_parameters": []
+        }
+      ],
+      "task_description": "Task: create an agent which summarizes my last n emails\nWorkflow steps (execute in order):\n  1. Get the last n emails from inbox (Gmail) \u2014 Fetches the most recent n email messages from the user's Gmail inbox\n  2. Extract email content and metadata (Gmail) \u2014 Retrieves the subject, sender, date, and body content from each email\n  3. Summarize the email contents into a consolidated report \u2014 Creates a summary text highlighting key information, themes, and important details from all the emails\nEndpoint 0: POST /summarize-recent-emails \u2014 Fetch the last n emails from Gmail and generate a summary of their content\nServices: Gmail\nParameters:\n- n (int, query, endpoint 0): Specifies how many of the most recent emails to fetch from Gmail for summarization",
+      "port": 8004,
+      "created_at": "2026-02-01T06:33:43Z"
+    }
+  ],
+  "next_port": 8005
+}

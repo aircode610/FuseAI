@@ -183,7 +183,7 @@ export function Documentation() {
               <div className="docs__example-output">
                 <strong>FuseAI Generates:</strong>
                 <ul>
-                  <li>API endpoint: <code>POST /webhook/trigger</code></li>
+                  <li>API endpoint: <code>POST /execute</code> (on-demand)</li>
                   <li>Zapier integration with Trello & Slack</li>
                   <li>FastAPI application with error handling</li>
                   <li>Monitoring dashboard with logs & metrics</li>

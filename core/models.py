@@ -53,6 +53,12 @@ class EndpointsOutput(BaseModel):
     endpoints: list[EndpointHint] = Field(default_factory=list, description="One or more REST endpoints")
 
 
+class SuggestedAgentNameOutput(BaseModel):
+    suggested_agent_name: str = Field(
+        description="A short display name for the agent: 2 to 5 words, title case (e.g. 'Trello Done Notifier', 'Slack Card Summarizer')"
+    )
+
+
 # --- Planner: LangGraph state ---
 class ParameterSpec(TypedDict, total=False):
     name: str
@@ -79,6 +85,7 @@ class PlannerState(TypedDict, total=False):
     suggested_path_slug: str
     suggested_endpoints: list[dict[str, Any]]
     task_description: str
+    suggested_agent_name: str
     errors: Annotated[list[str], lambda a, b: (a or []) + (b or [])]
 
 

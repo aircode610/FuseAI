@@ -10,6 +10,7 @@ import { Button, Card, Tabs, TabPanel, Modal, ModalFooter, Input, Select } from 
 import { StatusBadge } from '../components/common/Badge';
 import { AgentOverview, AgentLogs, AgentMetrics, AgentAPI, AgentCode } from '../components/agents';
 import { useAgents } from '../context/AgentContext';
+import agentService from '../services/agentService';
 import './AgentDetail.css';
 
 // Mock log data
@@ -58,11 +59,22 @@ const mockRecentLogs = [
 export function AgentDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { agents, updateAgent } = useAgents();
+  const { agents, addAgent, updateAgent } = useAgents();
   const [activeTab, setActiveTab] = useState('overview');
   const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [agentFromApi, setAgentFromApi] = useState(null);
 
-  const agent = agents.find(a => a.id === id);
+  const agent = agents.find(a => a.id === id) || agentFromApi;
+
+  useEffect(() => {
+    if (!id) return;
+    agentService.getAgent(id)
+      .then((data) => {
+        setAgentFromApi(data);
+        addAgent(data); // idempotent: add or no-op if already in list
+      })
+      .catch(() => setAgentFromApi(null));
+  }, [id, addAgent]);
 
   // If agent not found, show error
   if (!agent) {
@@ -89,19 +101,34 @@ export function AgentDetail() {
     { id: 'code', label: 'Code', icon: Code },
   ];
 
-  const handleStart = () => {
-    updateAgent({ id: agent.id, status: 'running' });
+  const handleStart = async () => {
+    try {
+      await agentService.deployAgent(agent.id);
+      updateAgent({ id: agent.id, status: 'deploying' });
+      setTimeout(() => agentService.getAgent(agent.id).then(updateAgent).catch(() => {}), 2000);
+    } catch {
+      updateAgent({ id: agent.id, status: 'stopped' });
+    }
   };
 
-  const handleStop = () => {
-    updateAgent({ id: agent.id, status: 'stopped' });
+  const handleStop = async () => {
+    try {
+      await agentService.stopAgent(agent.id);
+      updateAgent({ id: agent.id, status: 'stopped' });
+    } catch {
+      updateAgent({ id: agent.id, status: 'stopped' });
+    }
   };
 
-  const handleRestart = () => {
+  const handleRestart = async () => {
     updateAgent({ id: agent.id, status: 'restarting' });
-    setTimeout(() => {
-      updateAgent({ id: agent.id, status: 'running' });
-    }, 1500);
+    try {
+      await agentService.stopAgent(agent.id);
+      await agentService.deployAgent(agent.id);
+      setTimeout(() => agentService.getAgent(agent.id).then(updateAgent).catch(() => {}), 2000);
+    } catch {
+      updateAgent({ id: agent.id, status: 'stopped' });
+    }
   };
 
   return (
@@ -122,7 +149,7 @@ export function AgentDetail() {
             <StatusBadge status={agent.status} />
           </div>
           <p className="agent-detail__description">
-            {agent.triggerType} • {agent.services?.join(' → ')}
+            API • {agent.services?.length ? agent.services.join(' → ') : 'On-demand'}
           </p>
         </div>
         <div className="agent-detail__header-actions">

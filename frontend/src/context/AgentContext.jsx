@@ -27,8 +27,15 @@ function agentReducer(state, action) {
     case ACTIONS.SET_AGENTS:
       return { ...state, agents: action.payload, loading: false };
     
-    case ACTIONS.ADD_AGENT:
+    case ACTIONS.ADD_AGENT: {
+      const existing = state.agents.findIndex((a) => a.id === action.payload?.id);
+      if (existing >= 0) {
+        const next = [...state.agents];
+        next[existing] = { ...next[existing], ...action.payload };
+        return { ...state, agents: next };
+      }
       return { ...state, agents: [action.payload, ...state.agents] };
+    }
     
     case ACTIONS.UPDATE_AGENT:
       return {
