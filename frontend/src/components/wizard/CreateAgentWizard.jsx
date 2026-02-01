@@ -122,7 +122,7 @@ export function CreateAgentWizard({ onComplete, onCancel }) {
             </div>
             
             <Textarea
-              placeholder="Example: When a Trello card moves to the 'Done' list, summarize it and post a notification to the #dev-team Slack channel"
+              placeholder="Describe your workflow..."
               value={formData.prompt}
               onChange={(e) => updateFormData('prompt', e.target.value)}
               rows={6}
@@ -134,20 +134,6 @@ export function CreateAgentWizard({ onComplete, onCancel }) {
                 {createError}
               </div>
             )}
-            <div className="wizard__examples">
-              <h4>Example prompts:</h4>
-              <ul>
-                <li onClick={() => updateFormData('prompt', 'When a Trello card moves to Done, post a summary to Slack')}>
-                  When a Trello card moves to Done, post a summary to Slack
-                </li>
-                <li onClick={() => updateFormData('prompt', 'Every day at 9am, compile Asana tasks and send a digest to Discord')}>
-                  Every day at 9am, compile Asana tasks and send a digest to Discord
-                </li>
-                <li onClick={() => updateFormData('prompt', 'When someone creates a GitHub issue, create a corresponding Trello card')}>
-                  When someone creates a GitHub issue, create a corresponding Trello card
-                </li>
-              </ul>
-            </div>
           </div>
         )}
 

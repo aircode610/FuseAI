@@ -1,39 +1,6 @@
 {
   "agents": [
     {
-      "id": "agent_1769946407",
-      "name": "Gmail Email Summarizer",
-      "description": "Task: make an agent which summarizes my last n emails from gmail\nWorkflow steps (execute in order):\n  1. Connect to Gmail API and authenticate (Gmail) \u2014 Establish authenticated connection to access Gm",
-      "prompt": "make an agent which summarizes my last n emails from gmail",
-      "status": "running",
-      "triggerType": "on_demand",
-      "services": [
-        "Gmail"
-      ],
-      "endpoints": [
-        {
-          "method": "POST",
-          "path": "/summarize-emails",
-          "operation_id": "summarize_emails",
-          "summary": "Fetch last n emails from Gmail and generate a summary of their content",
-          "path_parameters": [],
-          "query_parameters": [
-            {
-              "name": "n",
-              "type": "int",
-              "description": "Number of last emails to retrieve and summarize",
-              "required": true,
-              "location": "query"
-            }
-          ],
-          "body_parameters": []
-        }
-      ],
-      "task_description": "Task: make an agent which summarizes my last n emails from gmail\nWorkflow steps (execute in order):\n  1. Connect to Gmail API and authenticate (Gmail) \u2014 Establish authenticated connection to access Gmail account\n  2. Get the last n emails from the inbox (Gmail) \u2014 Retrieve a list of the most recent n email messages with their content\n  3. Extract email content including subject, sender, and body text (Gmail) \u2014 Parse each email to extract relevant text data for summarization\n  4. Generate a summary of the extracted email content (Gmail) \u2014 Create a concise summary containing key points from all n emails\n  5. Format and present the email summary (Gmail) \u2014 Structure the summary in a readable format for the user\nEndpoint 0: POST /summarize-emails \u2014 Fetch last n emails from Gmail and generate a summary of their content\nServices: Gmail\nParameters:\n- n (int, query, endpoint 0): Specifies how many of the most recent emails to fetch from Gmail for summarization",
-      "port": 8014,
-      "created_at": "2026-02-01T11:47:01Z"
-    },
-    {
       "id": "agent_1769946722",
       "name": "Top Hackathon Finder",
       "description": "Task: create an agent which searches for the best upcoming hackathons and filters out the top (n) ones\nWorkflow steps (execute in order):\n  1. Search for upcoming hackathon events from multiple source",
@@ -63,7 +30,41 @@
       "task_description": "Task: create an agent which searches for the best upcoming hackathons and filters out the top (n) ones\nWorkflow steps (execute in order):\n  1. Search for upcoming hackathon events from multiple sources (Web search APIs or hackathon platforms) \u2014 Retrieves raw list of upcoming hackathon events with basic details\n  2. Extract and standardize hackathon details (Data processing service) \u2014 Normalizes hackathon data including dates, locations, prizes, themes, and requirements\n  3. Define ranking criteria for hackathon quality (Configuration service) \u2014 Establishes scoring metrics such as prize money, organizer reputation, participant limits, and theme relevance\n  4. Score and rank all hackathons based on defined criteria (Data analysis service) \u2014 Produces ranked list of hackathons with quality scores\n  5. Filter and select the top n hackathons from ranked list (Data filtering service) \u2014 Returns the specified number of highest-scoring hackathons\n  6. Format and present the top hackathons with key details (Output formatting service) \u2014 Delivers final list with hackathon names, dates, locations, prizes, and application links\nEndpoint 0: POST /search-top-hackathons \u2014 Search for upcoming hackathons and return the top N filtered results\nParameters:\n- n (int, body, endpoint 0): Specifies how many of the best hackathons to filter and return from the search results",
       "port": 8015,
       "created_at": "2026-02-01T11:52:18Z"
+    },
+    {
+      "id": "agent_1769947702",
+      "name": "Notion Course Calendar Sync",
+      "description": "Task: create an agent that receives a notion page link. extracts all the main courses and their schedules from the page. based on the extracted data it creates events on my google calendar.\nWorkflow s",
+      "prompt": "create an agent that receives a notion page link. extracts all the main courses and their schedules from the page. based on the extracted data it creates events on my google calendar.",
+      "status": "running",
+      "triggerType": "on_demand",
+      "services": [
+        "Notion",
+        "Google Calendar"
+      ],
+      "endpoints": [
+        {
+          "method": "POST",
+          "path": "/create-calendar-events-from-notion",
+          "operation_id": "create_calendar_events_from_notion",
+          "summary": "Extract course schedules from Notion page and create corresponding Google Calendar events",
+          "path_parameters": [],
+          "query_parameters": [],
+          "body_parameters": [
+            {
+              "name": "notion_page_link",
+              "type": "str",
+              "description": "The Notion page URL containing course and schedule information",
+              "required": true,
+              "location": "body"
+            }
+          ]
+        }
+      ],
+      "task_description": "Task: create an agent that receives a notion page link. extracts all the main courses and their schedules from the page. based on the extracted data it creates events on my google calendar.\nWorkflow steps (execute in order):\n  1. Parse the Notion page link to extract the page ID \u2014 Extract the page identifier from the provided Notion URL\n  2. Get the Notion page content by page ID (Notion) \u2014 Retrieve the full page content including all blocks and data\n  3. Extract main courses and their schedules from the page content (Notion) \u2014 Parse the page content to identify course names, dates, times, and any other schedule details\n  4. Transform the extracted course data into calendar event format \u2014 Convert course information into structured event objects with title, start time, end time, and description\n  5. Get the target Google Calendar ID (Google Calendar) \u2014 Identify which calendar to create events in (primary calendar or specific calendar)\n  6. Create calendar events for each main course (Google Calendar) \u2014 Add each course as a separate event in the Google Calendar with the extracted schedule information\nEndpoint 0: POST /create-calendar-events-from-notion \u2014 Extract course schedules from Notion page and create corresponding Google Calendar events\nServices: Notion, Google Calendar\nParameters:\n- notion_page_link (str, body, endpoint 0): Notion page to extract course data from\n- calendar_id (str, path, endpoint 1): Target calendar for creating course events\n- event_title (str, body, endpoint 1): Course name extracted from Notion page to use as event title\n- start_datetime (str, body, endpoint 1): Course schedule start time extracted from Notion page\n- end_datetime (str, body, endpoint 1): Course schedule end time extracted from Notion page",
+      "port": 8016,
+      "created_at": "2026-02-01T12:08:36Z"
     }
   ],
-  "next_port": 8016
+  "next_port": 8019
 }
