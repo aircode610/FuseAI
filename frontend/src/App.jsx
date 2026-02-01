@@ -1,11 +1,16 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { AgentProvider } from './context/AgentContext';
+import { ToastProvider } from './context/ToastContext';
 import { Layout } from './components/layout';
 import { Dashboard, AgentDetail, Settings, Documentation } from './pages';
+import { ToastContainer } from './components/common';
+import { useToast } from './context/ToastContext';
 
-function App() {
+function AppContent() {
+  const { toasts, dismissToast } = useToast();
+
   return (
-    <AgentProvider>
+    <>
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Layout />}>
@@ -16,7 +21,18 @@ function App() {
           </Route>
         </Routes>
       </BrowserRouter>
-    </AgentProvider>
+      <ToastContainer toasts={toasts} onDismiss={dismissToast} />
+    </>
+  );
+}
+
+function App() {
+  return (
+    <ToastProvider>
+      <AgentProvider>
+        <AppContent />
+      </AgentProvider>
+    </ToastProvider>
   );
 }
 

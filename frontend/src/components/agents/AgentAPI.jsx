@@ -6,6 +6,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { Copy, Play } from 'lucide-react';
 import { Card, CardHeader, CardBody, Button, Textarea } from '../common';
+import { useToast } from '../../context/ToastContext';
 import agentService from '../../services/agentService';
 import './AgentAPI.css';
 
@@ -26,6 +27,7 @@ function buildDefaultBody(bodyParams) {
 }
 
 export function AgentAPI({ agent }) {
+  const { success, error } = useToast();
   const endpoints = agent?.endpoints || [];
   const firstEndpoint = endpoints[0];
   const [selectedPath, setSelectedPath] = useState(firstEndpoint?.path || '/execute');
@@ -96,17 +98,28 @@ export function AgentAPI({ agent }) {
         body: method !== 'GET' ? body : undefined,
       };
       const result = await agentService.testEndpoint(agent.id, payload);
-      setResponse({
+      const responseData = {
         status: result.status,
         duration: result.duration ?? 0,
         body: result.body ?? result,
-      });
-    } catch (error) {
+      };
+      setResponse(responseData);
+      
+      // Show success notification
+      const statusCode = result.status || 200;
+      if (statusCode >= 200 && statusCode < 300) {
+        success(`Request completed successfully (${statusCode}) in ${result.duration || 0}ms`);
+      } else {
+        error(`Request returned status ${statusCode}`);
+      }
+    } catch (err) {
+      const errorMsg = err.message || 'Request failed. Is the agent running?';
       setResponse({
         status: 500,
         duration: 0,
-        body: { error: error.message || 'Request failed. Is the agent running?' },
+        body: { error: errorMsg },
       });
+      error(errorMsg);
     } finally {
       setLoading(false);
     }

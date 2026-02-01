@@ -7,6 +7,7 @@
 import { useState } from 'react';
 import { Wand2, ArrowRight, ArrowLeft, Check, Loader, Settings } from 'lucide-react';
 import { Button, Input, Textarea, Card, CardBody } from '../common';
+import { useToast } from '../../context/ToastContext';
 import agentService from '../../services/agentService';
 import './CreateAgentWizard.css';
 
@@ -17,6 +18,7 @@ const STEPS = [
 ];
 
 export function CreateAgentWizard({ onComplete, onCancel }) {
+  const { success, error } = useToast();
   const [currentStep, setCurrentStep] = useState(0);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [createError, setCreateError] = useState(null);
@@ -76,9 +78,12 @@ export function CreateAgentWizard({ onComplete, onCancel }) {
         prompt: formData.prompt.trim(),
         name: formData.name?.trim() || undefined,
       });
+      success(`Agent "${agent.name || 'Unnamed'}" deployed successfully!`);
       onComplete?.({ ...formData, ...agent });
     } catch (err) {
-      setCreateError(err?.message || err?.data?.detail || 'Failed to create agent.');
+      const errorMsg = err?.message || err?.data?.detail || 'Failed to create agent.';
+      setCreateError(errorMsg);
+      error(errorMsg);
     } finally {
       setIsAnalyzing(false);
     }
