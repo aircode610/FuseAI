@@ -15,10 +15,13 @@ from core.models import (
     PlannerState,
     ServicesOutput,
     ValidateOutput,
+    WorkflowStepItem,
+    WorkflowStepsOutput,
 )
 from core.planner_prompts import (
     format_extract_parameters,
     format_extract_services,
+    format_extract_workflow_steps,
     format_suggest_endpoint,
     format_validate_task,
 )
@@ -59,6 +62,38 @@ def extract_services(state: PlannerState) -> dict[str, Any]:
         return {"services": [s.strip() for s in out.services if s]}
     except Exception as e:
         return {"services": [], "errors": [f"Extract services failed: {e}"]}
+
+
+def extract_workflow_steps(state: PlannerState) -> dict[str, Any]:
+    user_prompt = state.get("user_prompt") or ""
+    services = state.get("services") or []
+    system, user = format_extract_workflow_steps(user_prompt, services)
+    try:
+        out = _invoke_structured(system, user, WorkflowStepsOutput)
+        steps_list = out.steps or []
+        # Normalize (handle Pydantic model or dict) and sort by step_index
+        steps_dicts: list[dict[str, Any]] = []
+        for s in steps_list:
+            if hasattr(s, "model_dump"):
+                s = s.model_dump()
+            if isinstance(s, dict):
+                steps_dicts.append({
+                    "step_index": s.get("step_index", len(steps_dicts) + 1),
+                    "action": (s.get("action") or "").strip(),
+                    "service_hint": (s.get("service_hint") or "").strip(),
+                    "description": (s.get("description") or "").strip(),
+                })
+            elif isinstance(s, WorkflowStepItem):
+                steps_dicts.append({
+                    "step_index": getattr(s, "step_index", len(steps_dicts) + 1),
+                    "action": (getattr(s, "action", None) or "").strip(),
+                    "service_hint": (getattr(s, "service_hint", None) or "").strip(),
+                    "description": (getattr(s, "description", None) or "").strip(),
+                })
+        steps_dicts.sort(key=lambda x: x["step_index"])
+        return {"workflow_steps": steps_dicts}
+    except Exception as e:
+        return {"workflow_steps": [], "errors": [f"Extract workflow steps failed: {e}"]}
 
 
 def extract_parameters(state: PlannerState) -> dict[str, Any]:
@@ -114,11 +149,25 @@ def suggest_endpoint(state: PlannerState) -> dict[str, Any]:
 def format_task_description(state: PlannerState) -> dict[str, Any]:
     user_prompt = state.get("user_prompt") or ""
     services = state.get("services") or []
+    workflow_steps = state.get("workflow_steps") or []
     parameters = state.get("parameters") or []
     suggested_endpoints = state.get("suggested_endpoints") or []
     method = state.get("suggested_http_method") or "POST"
     path_slug = state.get("suggested_path_slug") or "execute"
     parts = [f"Task: {user_prompt}"]
+    if workflow_steps:
+        parts.append("Workflow steps (execute in order):")
+        for s in workflow_steps:
+            idx = s.get("step_index", 0)
+            action = s.get("action", "")
+            hint = s.get("service_hint", "")
+            desc = s.get("description", "")
+            line = f"  {idx}. {action}"
+            if hint:
+                line += f" ({hint})"
+            if desc:
+                line += f" — {desc}"
+            parts.append(line)
     if suggested_endpoints:
         for i, ep in enumerate(suggested_endpoints):
             m = ep.get("method", "POST")
@@ -144,12 +193,14 @@ def build_planner_graph() -> StateGraph:
     builder: StateGraph = StateGraph(PlannerState)
     builder.add_node("validate_task", validate_task)
     builder.add_node("extract_services", extract_services)
+    builder.add_node("extract_workflow_steps", extract_workflow_steps)
     builder.add_node("extract_parameters", extract_parameters)
     builder.add_node("suggest_endpoint", suggest_endpoint)
     builder.add_node("format_task_description", format_task_description)
     builder.add_edge(START, "validate_task")
     builder.add_edge("validate_task", "extract_services")
-    builder.add_edge("extract_services", "extract_parameters")
+    builder.add_edge("extract_services", "extract_workflow_steps")
+    builder.add_edge("extract_workflow_steps", "extract_parameters")
     builder.add_edge("extract_parameters", "suggest_endpoint")
     builder.add_edge("suggest_endpoint", "format_task_description")
     builder.add_edge("format_task_description", END)

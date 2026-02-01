@@ -18,6 +18,17 @@ class ServicesOutput(BaseModel):
     services: list[str] = Field(default_factory=list, description="Distinct service/app names (e.g. Trello, Slack)")
 
 
+class WorkflowStepItem(BaseModel):
+    step_index: int = Field(description="1-based order of this step in the workflow")
+    action: str = Field(description="Concrete action in imperative form, e.g. 'Get the board by ID', 'List all cards for that board'")
+    service_hint: str = Field(default="", description="Which service/app this step uses (e.g. Trello, Slack)")
+    description: str = Field(default="", description="Short clarification: what data is fetched or produced for the next step")
+
+
+class WorkflowStepsOutput(BaseModel):
+    steps: list[WorkflowStepItem] = Field(default_factory=list, description="Ordered list of workflow steps; no gaps (e.g. 'summarize cards' must be preceded by 'list/get all cards')")
+
+
 class ParameterItem(BaseModel):
     name: str = Field(description="snake_case parameter name")
     type: str = Field(default="str", description="str, int, bool, float, or list[str]/list[int]/list[dict]")
@@ -62,6 +73,7 @@ class PlannerState(TypedDict, total=False):
     user_prompt: str
     validation_result: ValidationResult
     services: list[str]
+    workflow_steps: list[dict[str, Any]]  # ordered steps from WorkflowStepItem
     parameters: list[ParameterSpec]
     suggested_http_method: str
     suggested_path_slug: str

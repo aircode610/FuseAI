@@ -26,7 +26,7 @@ except ImportError:
 from core.planner import run_planner
 
 
-DEFAULT_PROMPT = "Get all Trello cards for a person and send them a summarization in Slack"
+DEFAULT_PROMPT = "summarize the last n emails in my gmail if there is anyone needing a meeting schedule one in my google calendar"
 
 
 def main() -> None:
@@ -39,6 +39,7 @@ def main() -> None:
     print("--- Result ---")
     print("validation_result:", result.get("validation_result"))
     print("services:", result.get("services"))
+    print("workflow_steps:", result.get("workflow_steps"))
     print("parameters:", result.get("parameters"))
     print("suggested_http_method:", result.get("suggested_http_method"))
     print("suggested_path_slug:", result.get("suggested_path_slug"))

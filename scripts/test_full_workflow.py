@@ -40,7 +40,7 @@ def main() -> None:
     )
     parser.add_argument(
         "--prompt",
-        default="Analyze cards in a Trello board and give a summary of the cards and their status.",
+        default="summarize the last n emails in my gmail if there is anyone needing a meeting schedule one in my google calendar",
         help="Task prompt for the design agent",
     )
     parser.add_argument(

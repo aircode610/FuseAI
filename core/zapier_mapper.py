@@ -20,6 +20,7 @@ def get_planner_context(user_prompt: str) -> dict[str, Any]:
     validation = state.get("validation_result") or {}
     valid = validation.get("valid", True)
     services = list(state.get("services") or [])
+    workflow_steps = list(state.get("workflow_steps") or [])
     task_description = (state.get("task_description") or "").strip()
     parameters = list(state.get("parameters") or [])
     api_design = run_api_designer(state)
@@ -46,6 +47,7 @@ def get_planner_context(user_prompt: str) -> dict[str, Any]:
     }
     return {
         "services": services,
+        "workflow_steps": workflow_steps,
         "task_description": task_description,
         "parameters": parameters,
         "api_design": design_dict,
@@ -164,6 +166,7 @@ def save_tools_to_context(context: dict[str, Any], selected_tools_serialized: li
     context["context_for_coding_agent"] = {
         "api_design": context.get("api_design", {}),
         "task_description": context.get("task_description", ""),
+        "workflow_steps": context.get("workflow_steps", []),
         "services": context.get("services", []),
         "parameters": context.get("parameters", []),
         "selected_zapier_tools": selected_tools_serialized,

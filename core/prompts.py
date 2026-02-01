@@ -23,6 +23,27 @@ Workflow task:
 {user_prompt}
 """
 
+# --- Planner: extract workflow steps (ordered, no gaps) ---
+EXTRACT_WORKFLOW_STEPS_SYSTEM = """You are a workflow analyst. Given a user task, you break it into an ordered list of concrete, step-by-step actions that an API agent will execute. This list will be used to select the right API tools (e.g. Zapier) and to generate code in the correct order.
+
+Rules:
+- Output steps in execution order. Each step must be a single, concrete action (e.g. "Get the board by ID", "List all cards for that board", "Summarize the list of cards into text").
+- Do NOT leave gaps. If the task says "analyze all cards and write a summarization", you MUST include:
+  1) A step to get or identify the board (e.g. "Get the board by ID" or "Find the board").
+  2) A step to fetch all cards for that board (e.g. "List all cards for that board" or "Get all cards on the board").
+  3) A step to summarize (e.g. "Summarize the cards into a short text").
+- For "get X and do Y with it", always include an explicit step to "get/fetch/list X" before the step that "does Y with X".
+- For "analyze/summarize/count/search [resource]", first include a step to "list/get [resource]" then the analyze/summarize step.
+- Assign step_index starting at 1. For each step give: action (imperative, specific), service_hint (which app: Trello, Slack, etc.), and description (what data is produced for the next step).
+- Keep 3–8 steps typically; more if the task is complex."""
+
+EXTRACT_WORKFLOW_STEPS_USER = """Workflow task:
+{user_prompt}
+
+Services involved: {services}
+
+Break this task into an ordered list of concrete steps. Ensure there are no gaps: e.g. "summarize all cards" requires a prior step "list all cards". For each step provide step_index (1-based), action, service_hint, and description."""
+
 # --- Planner: extract parameters ---
 EXTRACT_PARAMETERS_SYSTEM = """You are an API designer. Given a workflow task and the list of services involved, list ONLY the parameters that are explicitly required by the task—i.e. mentioned or clearly implied (e.g. "for a person" → person identifier, "send to Slack" → Slack recipient).
 
@@ -72,13 +93,13 @@ Suggest one or more REST endpoints. For each: method, path_slug, and a one-line 
 CODE_GEN_SYSTEM = """You are a code generator. Generate the complete FastAPI agent Python file (main.py) that:
 1. Defines create_app(tools: list) -> FastAPI. The tools are LangChain tools passed in by the runner; do NOT call get_zapier_tools or load tools inside the agent.
 2. Uses the template for structure: same imports, path setup, _get_model, _format_request_context. Inside create_app(tools), run_agent uses the passed-in tools list directly (no _get_tools that calls Zapier).
-3. Fills config from context: TASK_DESCRIPTION, SYSTEM_PROMPT from the context (task_description, api_design). SERVICES and SELECTED_TOOL_NAMES are only for reference in comments; the actual tools are passed into create_app(tools).
+3. Fills config from context: TASK_DESCRIPTION, SYSTEM_PROMPT from the context (task_description, api_design). If context includes workflow_steps, ensure TASK_DESCRIPTION or SYSTEM_PROMPT instructs the agent to execute in that order (e.g. "Do the following in order: 1. ... 2. ...") so the ReAct agent fetches data before summarizing or acting on it. SERVICES and SELECTED_TOOL_NAMES are only for reference in comments; the actual tools are passed into create_app(tools).
 4. Registers one FastAPI route per endpoint in context.api_design.endpoints. Each route: extract path/query/body params, build request_context, set task_prompt = TASK_DESCRIPTION + request context text, call run_agent(task_prompt, SYSTEM_PROMPT) (run_agent uses the tools stored in app state or closure).
 5. create_app(tools) must store tools so run_agent can use them (e.g. app.state.tools = tools and run_agent reads from request.app.state.tools, or a closure over tools). Ensures project root is on sys.path (Path(__file__).resolve().parent.parent.parent.parent).
 Output only the Python code, no explanation. Use a markdown code block: ```python\\n...\\n```"""
 
 # --- Zapier tool selection ---
-TOOL_SELECTION_SYSTEM = """You are selecting which Zapier MCP tools are needed to implement the given task and API design. Return only the exact tool names (as listed) that are necessary. Do not add tools that are not in the list. Prefer a minimal set that covers the task and the API endpoints."""
+TOOL_SELECTION_SYSTEM = """You are selecting which Zapier MCP tools are needed to implement the given task and API design. The task may include "Workflow steps (execute in order)" — you must select at least one tool that fulfills each step (e.g. if step 2 is "List all cards for that board", you must include a tool that lists cards; if step 3 is "Summarize the cards", the agent may use an LLM for that but you may still need a tool that provided the cards). Return only the exact tool names (as listed) that are necessary. Do not add tools that are not in the list. Prefer a minimal set that covers every workflow step and the API endpoints."""
 
 TOOL_SELECTION_USER = """Task and context:
 {task}
@@ -100,6 +121,14 @@ def format_validate_task(user_prompt: str) -> tuple[str, str]:
 
 def format_extract_services(user_prompt: str) -> tuple[str, str]:
     return EXTRACT_SERVICES_SYSTEM, EXTRACT_SERVICES_USER.format(user_prompt=user_prompt or "")
+
+
+def format_extract_workflow_steps(user_prompt: str, services: list[str]) -> tuple[str, str]:
+    services_str = ", ".join(services) if services else "Not specified"
+    return (
+        EXTRACT_WORKFLOW_STEPS_SYSTEM,
+        EXTRACT_WORKFLOW_STEPS_USER.format(user_prompt=user_prompt or "", services=services_str),
+    )
 
 
 def format_extract_parameters(user_prompt: str, services: list[str]) -> tuple[str, str]:
