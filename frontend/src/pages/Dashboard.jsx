@@ -11,7 +11,7 @@ import { filterBySearchQuery, pluralize } from '../utils';
 import './Dashboard.css';
 
 export function Dashboard() {
-  const { agents, setAgents, addAgent, removeAgent, updateAgent, setLoading } = useAgents();
+  const { agents, setAgents, addAgent, removeAgent, updateAgent, setLoading, setError } = useAgents();
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -44,8 +44,14 @@ export function Dashboard() {
     setTimeout(() => updateAgent({ id, status: 'running' }), 1500);
   };
 
-  const handleDelete = (id) => {
-    if (window.confirm('Delete this agent?')) removeAgent(id);
+  const handleDelete = async (id) => {
+    if (!window.confirm('Delete this agent? This will remove the agent, its code, metrics, and logs permanently.')) return;
+    try {
+      await agentService.deleteAgent(id);
+      removeAgent(id);
+    } catch (err) {
+      setError(err?.message || err?.data?.detail || 'Failed to delete agent');
+    }
   };
 
   const handleCreateComplete = (newAgent) => {

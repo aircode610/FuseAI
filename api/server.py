@@ -35,6 +35,8 @@ from api.registry import (
     reserve_port,
     update_agent,
 )
+from monitoring.logger import delete_agent_logs, log_error, log_info, get_logs as get_agent_logs
+from monitoring.metrics import delete_agent_metrics, get_metrics as get_agent_metrics, record_call
 
 # In-memory process registry: agent_id -> {"process": Popen, "port": int}
 _agent_processes: dict[str, dict[str, Any]] = {}
@@ -332,7 +334,7 @@ def api_stop_agent(agent_id: str) -> dict[str, Any]:
 
 @app.post("/api/agents/{agent_id}/test")
 def api_test_agent(agent_id: str, body: RunAgentRequest) -> dict[str, Any]:
-    """Proxy a request to the deployed agent (for Try It Out in UI)."""
+    """Proxy a request to the deployed agent (for Try It Out in UI). Records metrics and logs failures."""
     if agent_id not in _agent_processes:
         raise HTTPException(status_code=400, detail="Agent is not running. Deploy it first.")
     port = _agent_processes[agent_id].get("port")
@@ -353,48 +355,95 @@ def api_test_agent(agent_id: str, body: RunAgentRequest) -> dict[str, Any]:
         req_data = _json.dumps(body.body).encode("utf-8")
 
     start = time.perf_counter()
+    elapsed_ms = 0
+    status = 0
+    out_body = {}
     try:
         req = urllib.request.Request(url, data=req_data, method=body.method)
         req.add_header("Content-Type", "application/json")
         with urllib.request.urlopen(req, timeout=60) as resp:
             elapsed_ms = int((time.perf_counter() - start) * 1000)
+            status = resp.status
             resp_body = resp.read().decode("utf-8", errors="replace")
             try:
-                data = __import__("json").loads(resp_body)
+                out_body = __import__("json").loads(resp_body)
             except Exception:
-                data = {"raw": resp_body}
-            return {
-                "status": resp.status,
-                "duration": elapsed_ms,
-                "body": data,
-            }
+                out_body = {"raw": resp_body}
+            record_call(agent_id, status, elapsed_ms, body.path)
+            log_info(agent_id, f"Request {body.method} {body.path} completed", {"status": status, "duration_ms": elapsed_ms})
+            return {"status": status, "duration": elapsed_ms, "body": out_body}
     except urllib.error.HTTPError as e:
         elapsed_ms = int((time.perf_counter() - start) * 1000)
+        status = e.code
         try:
             err_body = e.read().decode("utf-8", errors="replace")
-            data = __import__("json").loads(err_body)
+            out_body = __import__("json").loads(err_body)
         except Exception:
-            data = {"error": str(e)}
-        return {"status": e.code, "duration": elapsed_ms, "body": data}
+            out_body = {"error": str(e)}
+        record_call(agent_id, status, elapsed_ms, body.path)
+        detail = out_body.get("detail", out_body.get("error", str(out_body)))
+        if isinstance(detail, str):
+            err_msg = f"Request failed: HTTP {e.code} — {detail}"
+        else:
+            err_msg = f"Request failed: HTTP {e.code} — {out_body.get('error', str(out_body))}"
+        log_error(agent_id, err_msg, {"status": e.code, "path": body.path, "body": out_body})
+        return {"status": e.code, "duration": elapsed_ms, "body": out_body}
     except Exception as e:
-        return {"status": 0, "duration": 0, "body": {"error": str(e)}}
+        elapsed_ms = int((time.perf_counter() - start) * 1000)
+        record_call(agent_id, 0, elapsed_ms, body.path)
+        err_msg = str(e)
+        log_error(agent_id, f"Request failed: {err_msg}", {"path": body.path, "error": err_msg})
+        return {"status": 0, "duration": elapsed_ms, "body": {"error": err_msg}}
 
 
 @app.get("/api/agents/{agent_id}/code")
-def api_get_agent_code(agent_id: str) -> dict[str, str]:
-    """Return generated main.py content."""
+def api_get_agent_code(agent_id: str, file: str | None = None) -> dict[str, Any]:
+    """Return generated code files for the agent. If file=main.py|config.json|README.md|requirements.txt return that only; else return { files: { main.py: ..., config.json: ..., ... } }."""
     from core.deployer import get_agent_dir
 
     agent_dir = get_agent_dir(agent_id, project_root=_ROOT)
     main_py = agent_dir / "main.py"
     if not main_py.exists():
         raise HTTPException(status_code=404, detail="Agent code not found")
-    return {"code": main_py.read_text(encoding="utf-8")}
+
+    allowed = ("main.py", "config.json", "README.md", "requirements.txt")
+    if file:
+        if file not in allowed:
+            raise HTTPException(status_code=400, detail=f"Invalid file. Allowed: {allowed}")
+        path = agent_dir / file
+        if not path.exists():
+            raise HTTPException(status_code=404, detail=f"File {file} not found")
+        return {"file": file, "content": path.read_text(encoding="utf-8")}
+
+    files = {}
+    for name in allowed:
+        p = agent_dir / name
+        if p.exists():
+            files[name] = p.read_text(encoding="utf-8")
+    if "main.py" not in files:
+        files["main.py"] = main_py.read_text(encoding="utf-8")
+    return {"files": files, "code": files.get("main.py", "")}
+
+
+@app.get("/api/agents/{agent_id}/metrics")
+def api_get_agent_metrics(agent_id: str) -> dict[str, Any]:
+    """Return per-agent metrics (API call counts, success rate, response times)."""
+    if not get_agent_from_registry(agent_id):
+        raise HTTPException(status_code=404, detail="Agent not found")
+    return get_agent_metrics(agent_id)
+
+
+@app.get("/api/agents/{agent_id}/logs")
+def api_get_agent_logs(agent_id: str, level: str | None = None, limit: int = 100) -> list[dict[str, Any]]:
+    """Return per-agent log entries (errors and info from API calls)."""
+    if not get_agent_from_registry(agent_id):
+        raise HTTPException(status_code=404, detail="Agent not found")
+    return get_agent_logs(agent_id, level=level, limit=limit)
 
 
 @app.delete("/api/agents/{agent_id}")
 def api_delete_agent(agent_id: str) -> dict[str, str]:
-    """Stop if running and remove from registry (does not delete runtime files)."""
+    """Stop if running, remove from registry, and completely delete the deployed agent (directory, metrics, logs)."""
     if agent_id in _agent_processes:
         p = _agent_processes[agent_id].get("process")
         if p and p.poll() is None:
@@ -407,6 +456,18 @@ def api_delete_agent(agent_id: str) -> dict[str, str]:
     from api.registry import remove_agent
     if not remove_agent(agent_id):
         raise HTTPException(status_code=404, detail="Agent not found")
+
+    # Delete deployed agent directory and all files inside
+    from core.deployer import get_agent_dir
+    import shutil
+    agent_dir = get_agent_dir(agent_id, project_root=_ROOT)
+    if agent_dir.exists():
+        shutil.rmtree(agent_dir, ignore_errors=True)
+
+    # Delete per-agent metrics and logs
+    delete_agent_metrics(agent_id)
+    delete_agent_logs(agent_id)
+
     return {"message": "Agent removed"}
 
 

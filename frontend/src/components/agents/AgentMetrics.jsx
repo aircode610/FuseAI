@@ -18,18 +18,8 @@ export function AgentMetrics({ metrics, loading }) {
     { value: '90d', label: 'Last 90 Days' },
   ];
 
-  // Mock chart data - in production, this would come from the API
-  const chartData = metrics?.requestsOverTime || [
-    { day: 'Mon', value: 12 },
-    { day: 'Tue', value: 19 },
-    { day: 'Wed', value: 15 },
-    { day: 'Thu', value: 22 },
-    { day: 'Fri', value: 30 },
-    { day: 'Sat', value: 18 },
-    { day: 'Sun', value: 25 },
-  ];
-
-  const maxValue = Math.max(...chartData.map(d => d.value));
+  const chartData = metrics?.requestsOverTime || [];
+  const maxValue = chartData.length ? Math.max(...chartData.map(d => d.value)) : 1;
 
   return (
     <div className="agent-metrics">

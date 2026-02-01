@@ -25,7 +25,7 @@ function buildDefaultBody(bodyParams) {
   return obj;
 }
 
-export function AgentAPI({ agent }) {
+export function AgentAPI({ agent, onRequestComplete }) {
   const endpoints = agent?.endpoints || [];
   const firstEndpoint = endpoints[0];
   const [selectedPath, setSelectedPath] = useState(firstEndpoint?.path || '/execute');
@@ -101,12 +101,14 @@ export function AgentAPI({ agent }) {
         duration: result.duration ?? 0,
         body: result.body ?? result,
       });
+      onRequestComplete?.();
     } catch (error) {
       setResponse({
         status: 500,
         duration: 0,
         body: { error: error.message || 'Request failed. Is the agent running?' },
       });
+      onRequestComplete?.();
     } finally {
       setLoading(false);
     }

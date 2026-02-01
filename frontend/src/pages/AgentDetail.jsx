@@ -13,58 +13,30 @@ import { useAgents } from '../context/AgentContext';
 import agentService from '../services/agentService';
 import './AgentDetail.css';
 
-// Mock log data
-const mockLogs = [
-  { id: 1, level: 'success', timestamp: '2:34 PM', message: 'Card "Fix login bug" posted to #dev-team', details: { card_id: 'card_123', channel: '#dev-team' } },
-  { id: 2, level: 'success', timestamp: '1:22 PM', message: 'Card "Update docs" posted to #dev-team', details: { card_id: 'card_124', channel: '#dev-team' } },
-  { id: 3, level: 'error', timestamp: '12:45 PM', message: 'Slack rate limit exceeded (429)', details: { error: 'Rate limit exceeded', status: 429 }, solutions: ['Implement exponential backoff', 'Reduce message frequency', 'Use Slack bulk API'] },
-  { id: 4, level: 'success', timestamp: '11:30 AM', message: 'Card "Deploy v2.0" posted to #dev-team', details: { card_id: 'card_125', channel: '#dev-team' } },
-  { id: 5, level: 'info', timestamp: '10:15 AM', message: 'Agent started successfully', details: { pid: 12345 } },
-];
-
-// Mock metrics data  
-const mockMetrics = {
-  totalRequests: 47,
-  successful: 45,
-  failed: 2,
-  successRate: 0.957,
-  avgResponseTime: 340,
-  minResponseTime: 240,
-  maxResponseTime: 1200,
-  p95ResponseTime: 580,
-  zapierCalls: 315,
-  webSearches: 12,
-  tokensUsed: 45230,
-  estimatedCost: 2.34,
-  requestsOverTime: [
-    { day: 'Mon', value: 12 },
-    { day: 'Tue', value: 19 },
-    { day: 'Wed', value: 15 },
-    { day: 'Thu', value: 22 },
-    { day: 'Fri', value: 30 },
-    { day: 'Sat', value: 18 },
-    { day: 'Sun', value: 25 },
-  ],
-};
-
-// Mock recent logs for overview
-const mockRecentLogs = [
-  { type: 'success', time: '2:34 PM', message: 'Card "Fix login bug" → #dev-team' },
-  { type: 'success', time: '1:22 PM', message: 'Card "Update docs" → #dev-team' },
-  { type: 'error', time: '12:45 PM', message: 'ERROR: Slack rate limit exceeded' },
-  { type: 'success', time: '11:30 AM', message: 'Card "Deploy v2.0" → #dev-team' },
-  { type: 'success', time: '10:15 AM', message: 'Card "Review PR #234" → #dev-team' },
-];
-
 export function AgentDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { agents, addAgent, updateAgent } = useAgents();
+  const { agents, addAgent, updateAgent, removeAgent, setError } = useAgents();
   const [activeTab, setActiveTab] = useState('overview');
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [agentFromApi, setAgentFromApi] = useState(null);
+  const [metrics, setMetrics] = useState(null);
+  const [logs, setLogs] = useState([]);
+  const [logsLoading, setLogsLoading] = useState(false);
 
   const agent = agents.find(a => a.id === id) || agentFromApi;
+
+  const fetchMetrics = () => {
+    if (!id) return;
+    agentService.getAgentMetrics(id).then(setMetrics).catch(() => setMetrics(null));
+  };
+  const fetchLogs = () => {
+    if (!id) return;
+    setLogsLoading(true);
+    agentService.getAgentLogs(id).then((data) => {
+      setLogs(Array.isArray(data) ? data : []);
+    }).catch(() => setLogs([])).finally(() => setLogsLoading(false));
+  };
 
   useEffect(() => {
     if (!id) return;
@@ -75,6 +47,12 @@ export function AgentDetail() {
       })
       .catch(() => setAgentFromApi(null));
   }, [id, addAgent]);
+
+  useEffect(() => {
+    if (!id) return;
+    fetchMetrics();
+    fetchLogs();
+  }, [id]);
 
   // If agent not found, show error
   if (!agent) {
@@ -95,7 +73,7 @@ export function AgentDetail() {
 
   const tabs = [
     { id: 'overview', label: 'Overview', icon: LayoutDashboard },
-    { id: 'logs', label: 'Logs', icon: FileText, badge: mockLogs.length },
+    { id: 'logs', label: 'Logs', icon: FileText, badge: logs.length },
     { id: 'metrics', label: 'Metrics', icon: BarChart2 },
     { id: 'api', label: 'API', icon: Webhook },
     { id: 'code', label: 'Code', icon: Code },
@@ -182,24 +160,32 @@ export function AgentDetail() {
         <TabPanel isActive={activeTab === 'overview'}>
           <AgentOverview 
             agent={agent} 
-            metrics={mockMetrics} 
-            recentLogs={mockRecentLogs} 
+            metrics={metrics} 
+            recentLogs={logs.slice(0, 5).map((log) => ({
+              type: log.level === 'error' ? 'error' : 'success',
+              time: log.timestamp || '',
+              message: log.message || '',
+            }))} 
           />
         </TabPanel>
 
         <TabPanel isActive={activeTab === 'logs'}>
           <AgentLogs 
-            logs={mockLogs} 
-            onRefresh={() => console.log('Refresh logs')} 
+            logs={logs} 
+            loading={logsLoading}
+            onRefresh={fetchLogs} 
           />
         </TabPanel>
 
         <TabPanel isActive={activeTab === 'metrics'}>
-          <AgentMetrics metrics={mockMetrics} />
+          <AgentMetrics metrics={metrics} loading={!metrics} />
         </TabPanel>
 
         <TabPanel isActive={activeTab === 'api'}>
-          <AgentAPI agent={agent} />
+          <AgentAPI 
+            agent={agent} 
+            onRequestComplete={() => { fetchMetrics(); fetchLogs(); }} 
+          />
         </TabPanel>
 
         <TabPanel isActive={activeTab === 'code'}>
@@ -250,7 +236,23 @@ export function AgentDetail() {
 
           <div className="settings-section settings-section--danger">
             <h4>Danger Zone</h4>
-            <Button variant="danger" size="sm">Delete Agent</Button>
+            <Button 
+              variant="danger" 
+              size="sm" 
+              onClick={async () => {
+                if (!window.confirm('Delete this agent? This will remove the agent, its code, metrics, and logs permanently.')) return;
+                try {
+                  await agentService.deleteAgent(agent.id);
+                  removeAgent(agent.id);
+                  setShowSettingsModal(false);
+                  navigate('/');
+                } catch (err) {
+                  setError(err?.message || err?.data?.detail || 'Failed to delete agent');
+                }
+              }}
+            >
+              Delete Agent
+            </Button>
           </div>
         </div>
         <ModalFooter>

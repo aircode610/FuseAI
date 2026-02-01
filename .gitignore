@@ -49,6 +49,10 @@ logs/
 runtime/deployed_agents/*
 !runtime/deployed_agents/.gitkeep
 
+# Per-agent metrics and logs (generated at runtime)
+runtime/metrics/
+runtime/logs/
+
 # OS
 .DS_Store
 Thumbs.db
