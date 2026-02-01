@@ -1,0 +1,6 @@
+# Core pipeline
+langgraph>=0.2.0
+langchain-anthropic>=0.2.0
+langchain-core>=0.2.0
+langsmith>=0.1.0
+python-dotenv>=1.0.0

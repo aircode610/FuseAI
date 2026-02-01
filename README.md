@@ -4,39 +4,27 @@ An AI-powered agent builder that lets users describe a workflow in plain English
 
 ## Overview
 
-FuseAI analyzes natural language requests, designs REST APIs, selects Zapier integrations, generates FastAPI code from templates, and deploys running agents with monitoring, error handling, and a testing playground.
+FuseAI analyzes natural language requests, designs REST APIs, generates FastAPI code from a single template using Zapier MCP for integrations, and deploys running agents with monitoring, error handling (using web search), and a testing playground.
 
 ## Project Structure
 
 ### `generator/core/` - Core Generation Pipeline
 
-**`planner.py`** - Analyzes user prompts and creates execution plans. Should implement: prompt parsing, requirement extraction, trigger type detection (webhook/scheduled/on-demand), feasibility validation using web search, and template selection based on requirements.
+**`planner.py`** - Analyzes user prompts and extracts requirements. Should implement: prompt parsing, service extraction (Trello, Slack, etc.), parameter inference based on services, and task description formatting.
 
-**`api_designer.py`** - Designs REST API structure for generated agents. Should implement: endpoint generation based on trigger types, parameter extraction for different services, authentication setup, and API documentation generation.
+**`api_designer.py`** - Designs REST API structure for generated agents. Should implement: endpoint generation (GET/POST/PUT/DELETE/PATCH) based on task requirements, parameter extraction and typing, path parameter vs body parameter decisions, authentication setup, and API documentation generation.
 
-**`zapier_mapper.py`** - Maps requirements to Zapier actions. Should implement: service-to-Zapier action mapping, web search for available Zapier triggers/actions, action inference from user requirements, and Zapier API integration.
-
-**`code_generator.py`** - Generates FastAPI code using templates. Should implement: template loading and rendering, formatting pattern discovery via web search, code generation with error handling, configuration file creation, and requirements.txt generation.
+**`code_generator.py`** - Generates FastAPI code using the agent template. Should implement: template loading, Claude prompt generation for the agent's task, template variable filling, configuration file creation, and requirements.txt generation.
 
 **`deployer.py`** - Deploys agents to runtime environment. Should implement: agent directory creation, file writing (main.py, config.json), dependency installation, FastAPI server startup, port management, API key generation, and monitoring setup.
 
-### `generator/templates/` - Code Templates
+### `generator/templates/` - Code Template
 
-**`fastapi_base.py`** - Base FastAPI boilerplate template. Should include: basic FastAPI app structure, authentication middleware, health check endpoints, CORS configuration, and environment variable loading.
-
-**`zapier_integration.py`** - Zapier API client patterns. Should include: Zapier API authentication, action execution wrapper, retry logic, response parsing, and error handling patterns.
-
-**`webhook_handler.py`** - Webhook trigger patterns. Should include: webhook endpoint template, payload validation, event extraction logic, signature verification, and async processing patterns.
-
-**`scheduled_task.py`** - Cron/scheduled execution template. Should include: APScheduler integration, cron expression parsing, background task execution, schedule update endpoints, and status monitoring.
-
-**`event_driven.py`** - Event-based triggers template. Should include: event listener setup, event queue management, event filtering logic, and event-to-action mapping.
-
-**`error_handler.py`** - Enhanced error handling with web search. Should include: exception catching patterns, web search for solutions, error logging with context, user-friendly error responses, and retry strategies.
+**`agent_template.py`** - Single FastAPI template for all agents. Should include: FastAPI app structure with flexible endpoint generation (GET/POST/PUT/DELETE/PATCH), Claude API integration with Zapier MCP, parameter validation (path, query, body), authentication middleware, health check endpoint, enhanced error handling with web search for solutions, logging integration, and environment variable configuration.
 
 ### `generator/monitoring/` - Monitoring & Observability
 
-**`logger.py`** - Request/response logging system. Should implement: structured logging for all agent activity, request/response tracking, Zapier action logging, error logging with context, and log rotation/storage.
+**`logger.py`** - Request/response logging system. Should implement: structured logging for all agent activity, request/response tracking, Claude API call logging, error logging with context, and log rotation/storage.
 
 **`metrics.py`** - Performance tracking. Should implement: request counting, success/failure rates, response time tracking, token usage monitoring, cost estimation, and metrics aggregation.
 
@@ -55,28 +43,28 @@ FuseAI analyzes natural language requests, designs REST APIs, selects Zapier int
 ## Key Features
 
 - **Natural Language Input**: Describe workflows in plain English
-- **Automatic API Design**: Generates REST endpoints based on requirements
-- **Zapier Integration**: Leverages 5000+ Zapier integrations
-- **Template-Based Generation**: Reliable code generation using FastAPI templates
+- **Automatic API Design**: Generates appropriate REST endpoints (GET/POST/PUT/DELETE/PATCH) based on task
+- **Zapier MCP Integration**: Single integration point for 8,000+ apps and 30,000+ actions
+- **Template-Based Generation**: Reliable code generation using single flexible FastAPI template
 - **Enhanced Error Handling**: Uses web search to find solutions to errors
 - **Monitoring Dashboard**: Track performance, logs, and errors
 - **Testing Playground**: Test generated APIs interactively
-- **Multiple Trigger Types**: Webhooks, scheduled tasks, and on-demand APIs
+- **Simple Architecture**: All agents are on-demand API calls with flexible REST endpoints
 
 ## Implementation Phases
 
 ### Phase 1: Core Pipeline (MVP) ⚙️
 - User input validation and prompt analysis
-- API design based on requirements
-- Zapier action mapping
-- Code generation from templates
+- Service and parameter extraction
+- API design with appropriate HTTP methods and endpoints
+- Code generation from single template using Claude
 - Basic deployment functionality
 
 ### Phase 2: Essential Features 🔧
 - Monitoring and logging system
-- Event triggers (webhooks + scheduled tasks)
 - Enhanced error handling with web search
 - Configuration management
+- API key generation and authentication
 
 ### Phase 3: User Interface 🎨
 - Agent monitoring dashboard
@@ -87,22 +75,22 @@ FuseAI analyzes natural language requests, designs REST APIs, selects Zapier int
 - Version control for agents
 - Agent composition (chaining multiple agents)
 - Cost tracking and optimization
-- Advanced workflow patterns
+- Batch operations support
 
 ## Getting Started
 
 ### Prerequisites
 - Python 3.9+
 - Anthropic API key (for Claude)
-- Zapier API key
+- Zapier MCP configured
 - FastAPI and dependencies
 
 ### Installation
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/FuseAI.git
-cd FuseAI
+git clone https://github.com/yourusername/fuseai.git
+cd fuseai
 
 # Install dependencies
 pip install -r requirements.txt
@@ -122,21 +110,86 @@ python main.py
 open http://localhost:8000
 ```
 
+### Testing the planner (LangSmith)
+
+To run the planner and inspect traces in **LangSmith**:
+
+1. Copy `.env.example` to `.env` and set `ANTHROPIC_API_KEY`, `LANGSMITH_API_KEY`, and `LANGCHAIN_TRACING_V2=true`.
+2. `pip install -r requirements.txt`
+3. Run the planner (e.g. `python -c "from core.planner import run_planner; run_planner('...')"`).
+4. Open [smith.langchain.com](https://smith.langchain.com) to view traces (nodes, LLM calls, state).
+
+See **[docs/TESTING.md](docs/TESTING.md)** for full setup.
+
 ## Example Use Cases
 
-- "When a card is added to Trello board, summarize it and send to Slack"
-- "Every morning at 9am, fetch Asana tasks and send summary to Discord"
-- "Create an API that takes GitHub issues and creates Jira tickets"
-- "Monitor website uptime and alert me on Telegram if it's down"
+- "Get all Trello cards assigned to a person and send summary to Slack" → `POST /summarize-cards`
+- "Fetch GitHub issues from a repository and create Asana tasks" → `POST /sync-issues`
+- "Get contact details from Salesforce by email" → `GET /contacts/{email}`
+- "Update Jira ticket status" → `PUT /tickets/{ticket_id}`
+- "Delete old Trello cards from a board" → `DELETE /cards/cleanup`
+
+## How It Works
+
+### User Input
+```
+"Get all Trello cards for a person and send them a summarization in Slack"
+```
+
+### Generated Agent
+FuseAI creates a FastAPI agent with:
+- **Endpoint**: Appropriate HTTP method and path (e.g., `POST /summarize`, `GET /contacts/{id}`, `PUT /update`)
+- **Parameters**: Inferred from task (path params, query params, or request body)
+- **Logic**: Calls Claude with Zapier MCP to execute the task
+- **Result**: Returns structured response
+
+### Agent Structure
+Every generated agent:
+1. Exposes RESTful endpoint(s) with appropriate HTTP methods
+2. Validates API key authentication
+3. Handles path parameters, query parameters, or request body as needed
+4. Calls Claude with Zapier MCP
+5. Zapier MCP handles all service integrations (Trello, Slack, etc.)
+6. Returns structured result
+7. Logs all activity for monitoring
 
 ## Architecture Decisions
 
-- **Templates over generation**: Uses FastAPI templates for reliability and consistency
-- **Zapier-only integrations**: Simplifies MCP configuration and provides 5000+ integrations
+- **Single template approach**: One flexible FastAPI template for all agents with dynamic endpoint generation
+- **Zapier MCP only**: Single integration point provides access to 8,000+ apps without individual MCP configuration
+- **Flexible REST design**: Supports GET/POST/PUT/DELETE/PATCH based on task semantics
+- **API-only agents**: All agents are on-demand API calls (no webhooks or scheduled tasks for MVP)
 - **Web search for errors**: High-value use case for intelligent error resolution
 - **API-key authentication**: Simple and secure for MVP
 - **File-based deployment**: Easy to manage, restart, and version agents
 - **Confirmation before deploy**: User reviews plan before agent creation
+- **Claude generates prompts**: Uses Claude to create optimal prompts for the agent's Claude API calls
+
+## Technical Stack
+
+- **FastAPI**: For generated agent APIs
+- **Anthropic Claude**: Main AI orchestration with Zapier MCP
+- **Zapier MCP**: Single integration point for all external services
+- **Python 3.9+**: Core language
+- **Uvicorn**: ASGI server for agents
+- **Logging**: Built-in Python logging
+- **File-based storage**: Simple deployment and management
+
+## Agent Lifecycle
+
+```
+User Prompt
+    ↓
+Planner (extract services & parameters)
+    ↓
+API Designer (design appropriate endpoint: GET/POST/PUT/DELETE/PATCH)
+    ↓
+Code Generator (fill template with Claude-generated prompt)
+    ↓
+Deployer (create directory, install deps, start server)
+    ↓
+Running Agent (exposes API, handles requests via Claude + Zapier MCP)
+```
 
 ---
 
@@ -148,29 +201,39 @@ open http://localhost:8000
 I'm working on FuseAI, an AI-powered agent generator that creates custom API agents from natural language descriptions.
 
 PROJECT OVERVIEW:
-- Users describe workflows in plain English (e.g., "When Trello card added, summarize and send to Slack")
-- System analyzes prompt, designs REST API, maps to Zapier actions, generates FastAPI code from templates
+- Users describe workflows in plain English (e.g., "Get Trello cards for a person and send summary to Slack")
+- System analyzes prompt, extracts services/parameters, designs appropriate REST endpoint (GET/POST/PUT/DELETE/PATCH), generates FastAPI code from one template
+- All agents use Claude with Zapier MCP (single integration for 8,000+ apps)
 - Deploys agents with monitoring, error handling (using web search), and testing playground
 
 ARCHITECTURE:
-- generator/core/: planner.py (prompt analysis), api_designer.py (endpoint design), zapier_mapper.py (service mapping), code_generator.py (template rendering), deployer.py (runtime deployment)
-- generator/templates/: FastAPI templates for webhooks, scheduled tasks, Zapier integration, error handling
+- generator/core/: planner.py (service & parameter extraction), api_designer.py (REST endpoint design with appropriate HTTP methods), code_generator.py (template filling), deployer.py (runtime deployment)
+- generator/templates/: agent_template.py (single flexible FastAPI template for all agents)
 - generator/monitoring/: logger.py (request/response logs), metrics.py (performance), alerting.py (notifications)
 - generator/ui/: agent_dashboard.py (monitoring UI), testing_playground.py (interactive testing)
 
 KEY FEATURES:
-- Template-based FastAPI code generation (not full LLM generation)
-- Zapier for all integrations (5000+ services)
+- Single template approach: one agent_template.py for all agents with flexible endpoint generation
+- Zapier MCP: single integration point for all 8,000+ services
+- REST-compliant agents: supports GET/POST/PUT/DELETE/PATCH based on task semantics
+- API-only agents: all agents expose RESTful endpoints (no webhooks/scheduling)
 - Web search for error solutions (main use of search)
-- Three trigger types: webhooks, scheduled (cron), on-demand APIs
-- Monitoring dashboard shows metrics, logs, errors for all deployed agents
+- Claude generates Claude prompts: uses Claude to create optimal prompts for agent's task execution
+
+SIMPLIFIED FLOW:
+1. User describes task in plain English
+2. Planner extracts services (Trello, Slack) and parameters (person_name, slack_user_id)
+3. API Designer determines appropriate HTTP method and endpoint path (GET /contacts/{id}, POST /summarize, etc.)
+4. Code Generator uses Claude to generate task prompt, fills template with endpoint configuration
+5. Deployer creates agent directory, starts FastAPI server
+6. Agent receives requests, calls Claude with Zapier MCP, returns results
 
 TECH STACK:
 - FastAPI for generated agents
-- Anthropic Claude API with web search tool
-- Zapier API for integrations
-- APScheduler for scheduled tasks
+- Anthropic Claude API with Zapier MCP
+- Web search tool for error handling
 - File-based deployment (runtime/deployed_agents/)
+- Single Zapier MCP URL: https://mcp.zapier.com
 
 CURRENT PHASE: [Specify which phase/feature you're working on]
 
