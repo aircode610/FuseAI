@@ -102,24 +102,15 @@ export function AgentAPI({ agent }) {
         status: result.status,
         duration: result.duration ?? 0,
         body: result.body ?? result,
-      };
-      setResponse(responseData);
-      
-      // Show success notification
-      const statusCode = result.status || 200;
-      if (statusCode >= 200 && statusCode < 300) {
-        success(`Request completed successfully (${statusCode}) in ${result.duration || 0}ms`);
-      } else {
-        error(`Request returned status ${statusCode}`);
-      }
-    } catch (err) {
-      const errorMsg = err.message || 'Request failed. Is the agent running?';
+      });
+      onRequestComplete?.();
+    } catch (error) {
       setResponse({
         status: 500,
         duration: 0,
         body: { error: errorMsg },
       });
-      error(errorMsg);
+      onRequestComplete?.();
     } finally {
       setLoading(false);
     }
