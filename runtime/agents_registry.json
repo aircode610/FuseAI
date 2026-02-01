@@ -1,4 +1,71 @@
 {
-  "agents": [],
-  "next_port": 8011
+  "agents": [
+    {
+      "id": "agent_1769945640",
+      "name": "Gmail Email Summarizer",
+      "description": "Task: make an agent which summarizes my last n emails\nWorkflow steps (execute in order):\n  1. Connect to Gmail account (Gmail) \u2014 Authenticate and establish connection to the user's Gmail account\n  2. ",
+      "prompt": "make an agent which summarizes my last n emails",
+      "status": "deploying",
+      "triggerType": "on_demand",
+      "services": [
+        "Gmail"
+      ],
+      "endpoints": [
+        {
+          "method": "POST",
+          "path": "/summarize-recent-emails",
+          "operation_id": "summarize_recent_emails",
+          "summary": "Fetch the last n emails from Gmail and generate AI-powered summaries of their content",
+          "path_parameters": [],
+          "query_parameters": [
+            {
+              "name": "n",
+              "type": "int",
+              "description": "Number of last emails to summarize",
+              "required": true,
+              "location": "query"
+            }
+          ],
+          "body_parameters": []
+        }
+      ],
+      "task_description": "Task: make an agent which summarizes my last n emails\nWorkflow steps (execute in order):\n  1. Connect to Gmail account (Gmail) \u2014 Authenticate and establish connection to the user's Gmail account\n  2. Get the last n emails from inbox (Gmail) \u2014 Retrieve the most recent n email messages, including subject, sender, content, and metadata\n  3. Extract email content and metadata (Gmail) \u2014 Parse each email to extract key information like subject, sender, date, and body text\n  4. Summarize the extracted email data \u2014 Generate a concise summary of the n emails including key topics, senders, and important information\n  5. Format and present the email summary \u2014 Structure the summary in a readable format for the user\nEndpoint 0: POST /summarize-recent-emails \u2014 Fetch the last n emails from Gmail and generate AI-powered summaries of their content\nServices: Gmail\nParameters:\n- n (int, query, endpoint 0): Specifies how many recent emails to fetch and summarize",
+      "port": 8011,
+      "created_at": "2026-02-01T11:34:13Z"
+    },
+    {
+      "id": "agent_1769945693",
+      "name": "Gmail Email Summarizer",
+      "description": "Task: make an agent which summarize my last n emails\nWorkflow steps (execute in order):\n  1. Get the last n emails from the user's Gmail inbox (Gmail) \u2014 Retrieves the most recent n emails from the inb",
+      "prompt": "make an agent which summarize my last n emails",
+      "status": "deploying",
+      "triggerType": "on_demand",
+      "services": [
+        "Gmail"
+      ],
+      "endpoints": [
+        {
+          "method": "POST",
+          "path": "/summarize-emails",
+          "operation_id": "summarize_emails",
+          "summary": "Fetch the last n emails from Gmail and generate a summary of their content",
+          "path_parameters": [],
+          "query_parameters": [
+            {
+              "name": "n",
+              "type": "int",
+              "description": "Number of last emails to retrieve and summarize",
+              "required": true,
+              "location": "query"
+            }
+          ],
+          "body_parameters": []
+        }
+      ],
+      "task_description": "Task: make an agent which summarize my last n emails\nWorkflow steps (execute in order):\n  1. Get the last n emails from the user's Gmail inbox (Gmail) \u2014 Retrieves the most recent n emails from the inbox, including email content, subject, sender, and timestamp\n  2. Extract key information from each email (Gmail) \u2014 Processes each email to extract relevant details like subject, sender, main content, and key points for summarization\n  3. Generate a summary of all the retrieved emails (Gmail) \u2014 Creates a concise summary that includes key topics, important information, and overview of the n most recent emails\nEndpoint 0: POST /summarize-emails \u2014 Fetch the last n emails from Gmail and generate a summary of their content\nServices: Gmail\nParameters:\n- n (int, query, endpoint 0): Specifies how many of the most recent emails to fetch for summarization",
+      "port": 8012,
+      "created_at": "2026-02-01T11:35:05Z"
+    }
+  ],
+  "next_port": 8013
 }

@@ -26,7 +26,7 @@ function buildDefaultBody(bodyParams) {
   return obj;
 }
 
-export function AgentAPI({ agent }) {
+export function AgentAPI({ agent, onRequestComplete }) {
   const { success, error } = useToast();
   const endpoints = agent?.endpoints || [];
   const firstEndpoint = endpoints[0];
@@ -98,7 +98,7 @@ export function AgentAPI({ agent }) {
         body: method !== 'GET' ? body : undefined,
       };
       const result = await agentService.testEndpoint(agent.id, payload);
-      const responseData = {
+      setResponse({
         status: result.status,
         duration: result.duration ?? 0,
         body: result.body ?? result,
@@ -108,7 +108,7 @@ export function AgentAPI({ agent }) {
       setResponse({
         status: 500,
         duration: 0,
-        body: { error: errorMsg },
+        body: { error: error?.message || 'Request failed. Is the agent running?' },
       });
       onRequestComplete?.();
     } finally {
