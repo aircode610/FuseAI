@@ -10,6 +10,16 @@ import { useToast } from '../../context/ToastContext';
 import agentService from '../../services/agentService';
 import './AgentAPI.css';
 
+function formatResponseBody(body) {
+  if (body == null) return '';
+  if (typeof body === 'string') return body;
+  try {
+    return JSON.stringify(body, null, 2);
+  } catch {
+    return String(body);
+  }
+}
+
 function buildDefaultBody(bodyParams) {
   const obj = {};
   (bodyParams || []).forEach((p) => {
@@ -395,20 +405,33 @@ export function AgentAPI({ agent, onRequestComplete }) {
             {response && (
               <div className="api-playground__response">
                 <div className="api-response__header">
-                  <span
-                    className={`api-response__status api-response__status--${
-                      response.status < 400 ? 'success' : 'error'
-                    }`}
+                  <div className="api-response__meta">
+                    <span
+                      className={`api-response__badge api-response__badge--${
+                        response.status >= 200 && response.status < 400 ? 'success' : 'error'
+                      }`}
+                    >
+                      {response.status} {response.status >= 200 && response.status < 400 ? 'OK' : 'Error'}
+                    </span>
+                    <span className="api-response__duration">
+                      {response.duration ?? 0} ms
+                    </span>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    icon={Copy}
+                    onClick={() => copyToClipboard(formatResponseBody(response.body))}
+                    title="Copy response"
                   >
-                    Status: {response.status} {response.status < 400 ? 'OK' : 'Error'}
-                  </span>
-                  <span className="api-response__duration">
-                    Duration: {response.duration}ms
-                  </span>
+                    Copy
+                  </Button>
                 </div>
-                <pre className="api-response__body">
-                  {JSON.stringify(response.body, null, 2)}
-                </pre>
+                <div className="api-response__body-wrap">
+                  <pre className="api-response__body">
+                    <code>{formatResponseBody(response.body)}</code>
+                  </pre>
+                </div>
               </div>
             )}
           </CardBody>

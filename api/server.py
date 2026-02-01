@@ -6,8 +6,10 @@ Integrates core (design agent → code generator → deployer) with the frontend
 from __future__ import annotations
 
 import os
+import socket
 import subprocess
 import sys
+import threading
 import time
 from pathlib import Path
 from typing import Any
@@ -40,8 +42,85 @@ from monitoring.metrics import delete_agent_metrics, get_metrics as get_agent_me
 
 # In-memory process registry: agent_id -> {"process": Popen, "port": int}
 _agent_processes: dict[str, dict[str, Any]] = {}
+# Agents that have passed port check (actually listening)
+_agent_ready: set[str] = set()
+_port_check_stop = threading.Event()
+
+
+def _is_port_open(host: str, port: int) -> bool:
+    try:
+        with socket.create_connection((host, port), timeout=1.0):
+            return True
+    except (OSError, socket.error):
+        return False
+
+
+def _port_check_loop() -> None:
+    while not _port_check_stop.is_set():
+        for agent_id, info in list(_agent_processes.items()):
+            if agent_id in _agent_ready:
+                continue
+            proc = info.get("process")
+            port = info.get("port")
+            if proc is None or port is None or proc.poll() is not None:
+                continue
+            if _is_port_open("127.0.0.1", port):
+                _agent_ready.add(agent_id)
+                update_agent(agent_id, {"status": "running"})
+        _port_check_stop.wait(timeout=2.0)
+
+
+def _start_all_agents() -> None:
+    """On server startup: deploy every agent in the registry that has code on disk."""
+    from core.deployer import get_agent_dir
+
+    for agent in list_agents():
+        agent_id = agent.get("id")
+        if not agent_id:
+            continue
+        agent_dir = get_agent_dir(agent_id, project_root=_ROOT)
+        if not (agent_dir / "main.py").exists():
+            continue
+        port = agent.get("port") or reserve_port()
+        if agent.get("port") is None:
+            update_agent(agent_id, {"port": port})
+        env = os.environ.copy()
+        env["FUSEAI_AGENT_ID"] = agent_id
+        env["FUSEAI_PORT"] = str(port)
+        env["FUSEAI_ROOT"] = str(_ROOT)
+        cmd = [
+            sys.executable,
+            "-c",
+            "import os, sys; "
+            "sys.path.insert(0, os.environ['FUSEAI_ROOT']); "
+            "from pathlib import Path; "
+            "from core.deployer import deploy_agent; "
+            "root = Path(os.environ['FUSEAI_ROOT']).resolve(); "
+            "deploy_agent(agent_id=os.environ['FUSEAI_AGENT_ID'], port=int(os.environ['FUSEAI_PORT']), project_root=root)",
+        ]
+        proc = subprocess.Popen(
+            cmd,
+            cwd=str(_ROOT),
+            env=env,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.PIPE,
+        )
+        _agent_processes[agent_id] = {"process": proc, "port": port}
+        update_agent(agent_id, {"status": "deploying"})
+
+
+def _start_port_check_thread() -> None:
+    t = threading.Thread(target=_port_check_loop, daemon=True)
+    t.start()
+
 
 app = FastAPI(title="FuseAI API", version="1.0.0")
+
+
+@app.on_event("startup")
+def on_startup() -> None:
+    _start_all_agents()
+    _start_port_check_thread()
 
 app.add_middleware(
     CORSMiddleware,
@@ -119,6 +198,7 @@ def _ensure_process_status() -> None:
         if proc is None or proc.poll() is not None:
             update_agent(agent_id, {"status": "stopped"})
             _agent_processes.pop(agent_id, None)
+            _agent_ready.discard(agent_id)
 
 
 def _suggest_name_from_task(task_description: str) -> str:
@@ -168,14 +248,17 @@ def api_env_schema() -> list[dict[str, str]]:
 def api_list_agents() -> list[dict[str, Any]]:
     _ensure_process_status()
     agents = list_agents()
-    # Sync status from running processes
+    # Sync status: running only when port is ready, else deploying
     for a in agents:
         aid = a.get("id")
         if aid in _agent_processes:
-            a["status"] = "running"
             a["port"] = _agent_processes[aid].get("port")
             a["baseUrl"] = f"http://localhost:{_agent_processes[aid].get('port')}"
             a["apiUrl"] = a["baseUrl"]
+            a["status"] = "running" if aid in _agent_ready else "deploying"
+        else:
+            # Keep registry status (stopped, created, etc.)
+            pass
     return [_agent_payload(a) for a in agents]
 
 
@@ -186,10 +269,10 @@ def api_get_agent(agent_id: str) -> dict[str, Any]:
     if not agent:
         raise HTTPException(status_code=404, detail="Agent not found")
     if agent_id in _agent_processes:
-        agent["status"] = "running"
         agent["port"] = _agent_processes[agent_id].get("port")
         agent["baseUrl"] = f"http://localhost:{_agent_processes[agent_id].get('port')}"
         agent["apiUrl"] = agent["baseUrl"]
+        agent["status"] = "running" if agent_id in _agent_ready else "deploying"
     return _agent_payload(agent)
 
 
@@ -281,6 +364,7 @@ def api_deploy_agent(agent_id: str, body: DeployAgentRequest | None = None) -> d
             except subprocess.TimeoutExpired:
                 p.kill()
         _agent_processes.pop(agent_id, None)
+        _agent_ready.discard(agent_id)
 
     port = (body and body.port) or agent.get("port") or reserve_port()
     env = os.environ.copy()
@@ -327,9 +411,18 @@ def api_stop_agent(agent_id: str) -> dict[str, Any]:
             p.kill()
             p.wait()
     _agent_processes.pop(agent_id, None)
+    _agent_ready.discard(agent_id)
     update_agent(agent_id, {"status": "stopped"})
     agent = get_agent_from_registry(agent_id) or {}
     return _agent_payload({**agent, "status": "stopped"})
+
+
+def _agent_request_timeout() -> int:
+    """Timeout in seconds for proxied agent requests (env FUSEAI_AGENT_REQUEST_TIMEOUT, default 300)."""
+    try:
+        return max(10, int(os.environ.get("FUSEAI_AGENT_REQUEST_TIMEOUT", "300")))
+    except (ValueError, TypeError):
+        return 300
 
 
 @app.post("/api/agents/{agent_id}/test")
@@ -354,6 +447,7 @@ def api_test_agent(agent_id: str, body: RunAgentRequest) -> dict[str, Any]:
         import json as _json
         req_data = _json.dumps(body.body).encode("utf-8")
 
+    timeout_sec = _agent_request_timeout()
     start = time.perf_counter()
     elapsed_ms = 0
     status = 0
@@ -361,7 +455,7 @@ def api_test_agent(agent_id: str, body: RunAgentRequest) -> dict[str, Any]:
     try:
         req = urllib.request.Request(url, data=req_data, method=body.method)
         req.add_header("Content-Type", "application/json")
-        with urllib.request.urlopen(req, timeout=60) as resp:
+        with urllib.request.urlopen(req, timeout=timeout_sec) as resp:
             elapsed_ms = int((time.perf_counter() - start) * 1000)
             status = resp.status
             resp_body = resp.read().decode("utf-8", errors="replace")
@@ -464,6 +558,7 @@ def api_delete_agent(agent_id: str) -> dict[str, str]:
     if agent_dir.exists():
         shutil.rmtree(agent_dir, ignore_errors=True)
 
+    _agent_ready.discard(agent_id)
     # Delete per-agent metrics and logs
     delete_agent_metrics(agent_id)
     delete_agent_logs(agent_id)

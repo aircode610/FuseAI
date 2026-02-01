@@ -12,6 +12,8 @@ export function AgentOverview({ agent, metrics, recentLogs }) {
     navigator.clipboard.writeText(text);
   };
 
+  const hasMetrics = metrics && (metrics.totalRequests ?? 0) > 0;
+
   return (
     <div className="agent-overview">
       {/* Quick Stats */}
@@ -21,7 +23,7 @@ export function AgentOverview({ agent, metrics, recentLogs }) {
             <Zap size={20} />
           </div>
           <div className="stat-card__content">
-            <span className="stat-card__value">{metrics?.totalRequests || 0}</span>
+            <span className="stat-card__value">{metrics?.totalRequests ?? 0}</span>
             <span className="stat-card__label">Total Requests</span>
           </div>
         </Card>
@@ -32,7 +34,7 @@ export function AgentOverview({ agent, metrics, recentLogs }) {
           </div>
           <div className="stat-card__content">
             <span className="stat-card__value">
-              {metrics?.successRate ? `${(metrics.successRate * 100).toFixed(1)}%` : '0%'}
+              {hasMetrics ? `${((metrics.successRate ?? 0) * 100).toFixed(1)}%` : '—'}
             </span>
             <span className="stat-card__label">Success Rate</span>
           </div>
@@ -43,7 +45,9 @@ export function AgentOverview({ agent, metrics, recentLogs }) {
             <Clock size={20} />
           </div>
           <div className="stat-card__content">
-            <span className="stat-card__value">{metrics?.avgResponseTime || 0}ms</span>
+            <span className="stat-card__value">
+              {hasMetrics ? `${metrics?.avgResponseTime ?? 0}ms` : '—'}
+            </span>
             <span className="stat-card__label">Avg Response</span>
           </div>
         </Card>
@@ -53,7 +57,7 @@ export function AgentOverview({ agent, metrics, recentLogs }) {
             <XCircle size={20} />
           </div>
           <div className="stat-card__content">
-            <span className="stat-card__value">{metrics?.failed || 0}</span>
+            <span className="stat-card__value">{metrics?.failed ?? 0}</span>
             <span className="stat-card__label">Errors</span>
           </div>
         </Card>

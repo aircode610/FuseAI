@@ -20,6 +20,7 @@ export function AgentMetrics({ metrics, loading }) {
 
   const chartData = metrics?.requestsOverTime || [];
   const maxValue = chartData.length ? Math.max(...chartData.map(d => d.value)) : 1;
+  const hasData = metrics && (metrics.totalRequests ?? 0) > 0;
 
   return (
     <div className="agent-metrics">
@@ -40,21 +41,25 @@ export function AgentMetrics({ metrics, loading }) {
           <h3>Requests Over Time</h3>
         </CardHeader>
         <CardBody>
-          <div className="metrics-chart">
-            <div className="metrics-chart__bars">
-              {chartData.map((item, index) => (
-                <div key={index} className="metrics-chart__bar-container">
-                  <div 
-                    className="metrics-chart__bar"
-                    style={{ height: `${(item.value / maxValue) * 100}%` }}
-                  >
-                    <span className="metrics-chart__value">{item.value}</span>
+          {chartData.length > 0 ? (
+            <div className="metrics-chart">
+              <div className="metrics-chart__bars">
+                {chartData.map((item, index) => (
+                  <div key={index} className="metrics-chart__bar-container">
+                    <div 
+                      className="metrics-chart__bar"
+                      style={{ height: `${(item.value / maxValue) * 100}%` }}
+                    >
+                      <span className="metrics-chart__value">{item.value}</span>
+                    </div>
+                    <span className="metrics-chart__label">{item.day}</span>
                   </div>
-                  <span className="metrics-chart__label">{item.day}</span>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
-          </div>
+          ) : (
+            <p className="agent-metrics__empty">No request data yet. Send a request from the API tab.</p>
+          )}
         </CardBody>
       </Card>
 
@@ -64,22 +69,26 @@ export function AgentMetrics({ metrics, loading }) {
           <h3>Success vs Failures</h3>
         </CardHeader>
         <CardBody>
-          <div className="metrics-progress">
-            <div className="metrics-progress__bar">
-              <div 
-                className="metrics-progress__fill metrics-progress__fill--success"
-                style={{ width: `${(metrics?.successRate || 0.95) * 100}%` }}
-              />
+          {hasData ? (
+            <div className="metrics-progress">
+              <div className="metrics-progress__bar">
+                <div 
+                  className="metrics-progress__fill metrics-progress__fill--success"
+                  style={{ width: `${(metrics.successRate ?? 0) * 100}%` }}
+                />
+              </div>
+              <div className="metrics-progress__labels">
+                <span className="metrics-progress__label metrics-progress__label--success">
+                  {((metrics.successRate ?? 0) * 100).toFixed(1)}% Success
+                </span>
+                <span className="metrics-progress__label metrics-progress__label--error">
+                  {((1 - (metrics.successRate ?? 0)) * 100).toFixed(1)}% Failed
+                </span>
+              </div>
             </div>
-            <div className="metrics-progress__labels">
-              <span className="metrics-progress__label metrics-progress__label--success">
-                {((metrics?.successRate || 0.95) * 100).toFixed(1)}% Success
-              </span>
-              <span className="metrics-progress__label metrics-progress__label--error">
-                {((1 - (metrics?.successRate || 0.95)) * 100).toFixed(1)}% Failed
-              </span>
-            </div>
-          </div>
+          ) : (
+            <p className="agent-metrics__empty">No data yet</p>
+          )}
         </CardBody>
       </Card>
 
@@ -89,53 +98,55 @@ export function AgentMetrics({ metrics, loading }) {
           <h3>Response Time Distribution</h3>
         </CardHeader>
         <CardBody>
-          <div className="metrics-stats">
-            <div className="metrics-stat">
-              <span className="metrics-stat__label">Min</span>
-              <span className="metrics-stat__value">{metrics?.minResponseTime || 240}ms</span>
+          {hasData ? (
+            <div className="metrics-stats">
+              <div className="metrics-stat">
+                <span className="metrics-stat__label">Min</span>
+                <span className="metrics-stat__value">{metrics?.minResponseTime ?? 0}ms</span>
+              </div>
+              <div className="metrics-stat">
+                <span className="metrics-stat__label">Avg</span>
+                <span className="metrics-stat__value">{metrics?.avgResponseTime ?? 0}ms</span>
+              </div>
+              <div className="metrics-stat">
+                <span className="metrics-stat__label">Max</span>
+                <span className="metrics-stat__value">{metrics?.maxResponseTime ?? 0}ms</span>
+              </div>
+              <div className="metrics-stat">
+                <span className="metrics-stat__label">P95</span>
+                <span className="metrics-stat__value">{metrics?.p95ResponseTime ?? 0}ms</span>
+              </div>
             </div>
-            <div className="metrics-stat">
-              <span className="metrics-stat__label">Avg</span>
-              <span className="metrics-stat__value">{metrics?.avgResponseTime || 340}ms</span>
-            </div>
-            <div className="metrics-stat">
-              <span className="metrics-stat__label">Max</span>
-              <span className="metrics-stat__value">{metrics?.maxResponseTime || 1200}ms</span>
-            </div>
-            <div className="metrics-stat">
-              <span className="metrics-stat__label">P95</span>
-              <span className="metrics-stat__value">{metrics?.p95ResponseTime || 580}ms</span>
-            </div>
-          </div>
+          ) : (
+            <p className="agent-metrics__empty">No data yet</p>
+          )}
         </CardBody>
       </Card>
 
-      {/* Resource Usage */}
-      <Card padding="none">
-        <CardHeader>
-          <h3>Resource Usage</h3>
-        </CardHeader>
-        <CardBody>
-          <div className="metrics-resources">
-            <div className="metrics-resource">
-              <span className="metrics-resource__label">Total Zapier API calls</span>
-              <span className="metrics-resource__value">{metrics?.zapierCalls || 315}</span>
+      {/* Resource Usage - only show when we have data / backend supports it */}
+      {hasData && (
+        <Card padding="none">
+          <CardHeader>
+            <h3>Request Summary</h3>
+          </CardHeader>
+          <CardBody>
+            <div className="metrics-resources">
+              <div className="metrics-resource">
+                <span className="metrics-resource__label">Total requests</span>
+                <span className="metrics-resource__value">{metrics?.totalRequests ?? 0}</span>
+              </div>
+              <div className="metrics-resource">
+                <span className="metrics-resource__label">Successful</span>
+                <span className="metrics-resource__value">{metrics?.successful ?? 0}</span>
+              </div>
+              <div className="metrics-resource">
+                <span className="metrics-resource__label">Failed</span>
+                <span className="metrics-resource__value">{metrics?.failed ?? 0}</span>
+              </div>
             </div>
-            <div className="metrics-resource">
-              <span className="metrics-resource__label">Total web searches</span>
-              <span className="metrics-resource__value">{metrics?.webSearches || 12}</span>
-            </div>
-            <div className="metrics-resource">
-              <span className="metrics-resource__label">Total tokens used</span>
-              <span className="metrics-resource__value">{(metrics?.tokensUsed || 45230).toLocaleString()}</span>
-            </div>
-            <div className="metrics-resource">
-              <span className="metrics-resource__label">Estimated cost</span>
-              <span className="metrics-resource__value">${(metrics?.estimatedCost || 2.34).toFixed(2)}</span>
-            </div>
-          </div>
-        </CardBody>
-      </Card>
+          </CardBody>
+        </Card>
+      )}
     </div>
   );
 }

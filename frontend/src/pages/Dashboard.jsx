@@ -1,20 +1,25 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Plus, Search, Bot } from 'lucide-react';
 import { Button, Input, Select, Modal } from '../components/common';
 import { AgentCard } from '../components/agents';
 import { CreateAgentWizard } from '../components/wizard';
 import { useAgents } from '../context/AgentContext';
+import { useToast } from '../context/ToastContext';
 import agentService from '../services/agentService';
 import { mockAgents } from '../mocks/agents';
 import { STATUS_OPTIONS } from '../constants';
 import { filterBySearchQuery, pluralize } from '../utils';
 import './Dashboard.css';
 
+const POLL_INTERVAL_MS = 2500;
+
 export function Dashboard() {
   const { agents, setAgents, addAgent, removeAgent, updateAgent, setLoading, setError } = useAgents();
+  const { success } = useToast();
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const prevStatusByRef = useRef({});
 
   useEffect(() => {
     let cancelled = false;
@@ -31,6 +36,28 @@ export function Dashboard() {
       });
     return () => { cancelled = true; };
   }, [setAgents, setLoading]);
+
+  // Poll agents and show toast when an agent transitions to "running"
+  useEffect(() => {
+    const interval = setInterval(() => {
+      agentService.getAgents().then((list) => {
+        if (!Array.isArray(list)) return;
+        const prev = prevStatusByRef.current;
+        for (const a of list) {
+          const id = a?.id;
+          const status = a?.status;
+          const prevStatus = prev[id];
+          if (prevStatus === 'deploying' && status === 'running' && a?.name) {
+            success(`Agent "${a.name}" is ready`);
+          }
+          prev[id] = status;
+        }
+        prevStatusByRef.current = prev;
+        setAgents(list);
+      }).catch(() => {});
+    }, POLL_INTERVAL_MS);
+    return () => clearInterval(interval);
+  }, [setAgents, success]);
 
   const filteredAgents = agents
     .filter(agent => filterStatus === 'all' || agent.status === filterStatus)
