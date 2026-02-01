@@ -6,6 +6,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { Copy, Play } from 'lucide-react';
 import { Card, CardHeader, CardBody, Button, Textarea } from '../common';
+import { useToast } from '../../context/ToastContext';
 import agentService from '../../services/agentService';
 import './AgentAPI.css';
 
@@ -25,7 +26,8 @@ function buildDefaultBody(bodyParams) {
   return obj;
 }
 
-export function AgentAPI({ agent, onRequestComplete }) {
+export function AgentAPI({ agent }) {
+  const { success, error } = useToast();
   const endpoints = agent?.endpoints || [];
   const firstEndpoint = endpoints[0];
   const [selectedPath, setSelectedPath] = useState(firstEndpoint?.path || '/execute');
@@ -96,7 +98,7 @@ export function AgentAPI({ agent, onRequestComplete }) {
         body: method !== 'GET' ? body : undefined,
       };
       const result = await agentService.testEndpoint(agent.id, payload);
-      setResponse({
+      const responseData = {
         status: result.status,
         duration: result.duration ?? 0,
         body: result.body ?? result,
@@ -106,7 +108,7 @@ export function AgentAPI({ agent, onRequestComplete }) {
       setResponse({
         status: 500,
         duration: 0,
-        body: { error: error.message || 'Request failed. Is the agent running?' },
+        body: { error: errorMsg },
       });
       onRequestComplete?.();
     } finally {

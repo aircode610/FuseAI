@@ -8,3 +8,4 @@ export { Badge, StatusBadge } from './Badge';
 export { Input, Textarea, Select } from './Input';
 export { Modal, ModalFooter } from './Modal';
 export { Tabs, TabPanel } from './Tabs';
+export { Toast, ToastContainer } from './Toast';
